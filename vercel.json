@@ -2,27 +2,20 @@
     "version": 2,
     "functions": {
         "api/index.php": {
-            "runtime": "vercel-php@0.7.1",
-            "includeFiles": "{app/**,bootstrap/*.php,config/**,database/**,public/**,resources/views/**,routes/**,vendor/**,.env}"
+            "runtime": "vercel-php@0.7.1"
         }
     },
     "routes": [
-        {
-            "src": "/build/(.*)",
-            "dest": "/public/build/$1"
-        },
-        {
-            "src": "/(favicon.ico|robots.txt)",
-            "dest": "/public/$1"
-        },
         {
             "src": "/(.*)",
             "dest": "/api/index.php"
         }
     ],
     "env": {
-        "APP_ENV": "production",
-        "APP_DEBUG": "false",
+        "APP_ENV": "local",
+        "APP_DEBUG": "true",
+        "APP_URL": "https://bakery-management-rho.vercel.app/",
+        "APP_KEY": "base64:Lwi77ooRMlzebgtCeTQ971guoNJhaLXmQcQ6H+jg0QM=",
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie",
         "CACHE_STORE": "array"
