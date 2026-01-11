@@ -2,9 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\Product;
 use App\Models\InventoryLocation;
+use App\Models\User;
+use App\Models\Product;
+use Spatie\Permission\Models\Role;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,6 +16,36 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Create roles
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $managerRole = Role::firstOrCreate(['name' => 'manager']);
+        $userRole = Role::firstOrCreate(['name' => 'user']);
+
+        // Create users
+        $admin = User::updateOrCreate(
+            ['username' => 'admin'],
+            [
+                'name' => 'Admin User',
+                'email' => 'admin@bakery.com',
+                'password' => Hash::make('admin'),
+            ]
+        );
+        $admin->assignRole($adminRole);
+
+        $manager = User::create([
+            'name' => 'Manager User',
+            'email' => 'manager@bakery.com',
+            'password' => Hash::make('password'),
+        ]);
+        $manager->assignRole($managerRole);
+
+        $user = User::create([
+            'name' => 'Regular User',
+            'email' => 'user@bakery.com',
+            'password' => Hash::make('password'),
+        ]);
+        $user->assignRole($userRole);
+
         // Create inventory locations
         InventoryLocation::create([
             'name' => 'Main Shop',

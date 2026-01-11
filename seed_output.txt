@@ -1,0 +1,28 @@
+
+   INFO  Seeding database.  
+
+
+   Spatie\Permission\Exceptions\RoleAlreadyExists 
+
+  A role `admin` already exists for guard `web`.
+
+  at vendor/spatie/laravel-permission/src/Exceptions/RoleAlreadyExists.php:11
+      7▕ class RoleAlreadyExists extends InvalidArgumentException
+      8▕ {
+      9▕     public static function create(string $roleName, string $guardName)
+     10▕     {
+  ➜  11▕         return new static(__('A role `:role` already exists for guard `:guard`.', [
+     12▕             'role' => $roleName,
+     13▕             'guard' => $guardName,
+     14▕         ]));
+     15▕     }
+
+      [2m+1 vendor frames [22m
+
+  2   database/seeders/DatabaseSeeder.php:20
+      Spatie\Permission\Models\Role::create(["admin", "web"])
+      [2m+23 vendor frames [22m
+
+  26  artisan:16
+      Illuminate\Foundation\Application::handleCommand(Object(Symfony\Component\Console\Input\ArgvInput))
+
