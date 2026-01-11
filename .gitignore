@@ -15,6 +15,8 @@
 /node_modules
 /public/build
 /public/hot
+/bootstrap/cache/*.php
+/storage/*.php
 /public/storage
 /storage/*.key
 /storage/pail
