@@ -78,3 +78,10 @@ Route::put('base-preparations/{basePreparation}/ingredients/{basePreparationIngr
 Route::delete('base-preparations/{basePreparation}/ingredients/{basePreparationIngredient}', [BasePreparationController::class, 'removeIngredient']);
 Route::post('base-preparations/{basePreparation}/recalculate', [BasePreparationController::class, 'recalculateCost']);
 Route::apiResource('base-preparations', BasePreparationController::class);
+
+
+Route::get('/health', fn () => 'OK');
+
+Route::get('/test-view', function () {
+    return view('welcome');
+});
