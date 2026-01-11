@@ -1,0 +1,13 @@
+node_modules
+vendor
+.git
+.env
+Dockerfile
+docker-compose.yml
+docker
+storage/*.key
+public/storage
+# public/build
+api
+.vercelignore
+vercel.json

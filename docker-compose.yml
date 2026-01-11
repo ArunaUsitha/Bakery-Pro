@@ -1,0 +1,64 @@
+services:
+  # PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bakery-pro-app
+    container_name: bakery-pro-app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - bakery-network
+
+  # Nginx Service
+  web:
+    image: nginx:alpine
+    container_name: bakery-pro-web
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - bakery-network
+    depends_on:
+      - app
+
+  # MySQL Service
+  db:
+    image: mysql:8.0
+    container_name: bakery-pro-db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-bakery_pro}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-bakery_user}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - bakery-network
+
+# Docker Networks
+networks:
+  bakery-network:
+    driver: bridge
+
+# Volumes
+volumes:
+  dbdata:
+    driver: local
