@@ -1,8 +1,0 @@
-/node_modules
-/vendor
-/.git
-/storage/*.key
-.env
-.idea
-.vscode
-/Recepie Cost Calculator.xlsx
