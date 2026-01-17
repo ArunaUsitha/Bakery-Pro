@@ -44,6 +44,11 @@ const navItems = [
         icon: <PageIcon />,
         name: "Vehicle Settlement",
         path: "/settlements",
+    },
+    {
+        icon: <CalenderIcon />,
+        name: "Shop Settlement",
+        path: "/shop-settlements",
     }
 ];
 

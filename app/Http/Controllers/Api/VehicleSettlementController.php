@@ -331,25 +331,31 @@ class VehicleSettlementController extends Controller
             $shop = InventoryLocation::where('type', 'shop')->first();
             if ($shop && $settlement->items_returned) {
                 foreach ($settlement->items_returned as $item) {
+                    $productId = $item['product_id'];
                     $qtyReturned = $item['quantity_returned'] ?? $item['quantity'] ?? 0;
+                    
                     if ($qtyReturned > 0) {
-                        // Deduct from vehicle
-                        $vehicleInventory = Inventory::where('product_id', $item['product_id'])
+                        // 1. Move returned items from vehicle to shop
+                        $remainingToTransfer = $qtyReturned;
+                        $vehicleEntries = Inventory::where('product_id', $productId)
                             ->where('inventory_location_id', $settlement->inventory_location_id)
                             ->where('quantity', '>', 0)
-                            ->first();
+                            ->orderBy('expiry_date', 'asc')
+                            ->get();
 
-                        if ($vehicleInventory) {
-                            $transferQty = min($vehicleInventory->quantity, $qtyReturned);
-                            $vehicleInventory->quantity -= $transferQty;
-                            $vehicleInventory->save();
+                        foreach ($vehicleEntries as $entry) {
+                            if ($remainingToTransfer <= 0) break;
+                            
+                            $transferQty = min($entry->quantity, $remainingToTransfer);
+                            $entry->quantity -= $transferQty;
+                            $entry->save();
 
                             // Add to shop
                             $shopInventory = Inventory::firstOrNew([
-                                'product_id' => $item['product_id'],
+                                'product_id' => $productId,
                                 'inventory_location_id' => $shop->id,
-                                'production_date' => $vehicleInventory->production_date,
-                                'expiry_date' => $vehicleInventory->expiry_date,
+                                'production_date' => $entry->production_date,
+                                'expiry_date' => $entry->expiry_date,
                             ], ['quantity' => 0]);
 
                             $shopInventory->quantity += $transferQty;
@@ -357,14 +363,22 @@ class VehicleSettlementController extends Controller
 
                             // Record transfer
                             StockTransfer::create([
-                                'product_id' => $item['product_id'],
+                                'product_id' => $productId,
                                 'from_location_id' => $settlement->inventory_location_id,
                                 'to_location_id' => $shop->id,
                                 'quantity' => $transferQty,
                                 'transfer_type' => 'vehicle_to_shop',
                             ]);
+
+                            $remainingToTransfer -= $transferQty;
                         }
                     }
+
+                    // 2. CLEAR REMAINING STOCK ON VEHICLE (These are the items sold)
+                    // After transfer, any remaining inventory for this product on this vehicle should be 0
+                    Inventory::where('product_id', $productId)
+                        ->where('inventory_location_id', $settlement->inventory_location_id)
+                        ->update(['quantity' => 0]);
                 }
             }
         });

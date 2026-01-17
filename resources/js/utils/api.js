@@ -46,10 +46,17 @@ export const initiateSettlement = (vehicleId) => api.post('/settlements/initiate
 export const recordReturn = (settlementId, data) => api.post(`/settlements/${settlementId}/record-return`, data);
 export const settleVehicle = (settlementId, data) => api.post(`/settlements/${settlementId}/settle`, data);
 
+// Shop Settlements
+export const getShopSettlements = (params) => api.get('/shop-settlements', { params });
+export const getShopSettlement = (id) => api.get(`/shop-settlements/${id}`);
+export const initiateShopSettlement = (locationId) => api.post('/shop-settlements/initiate', { location_id: locationId });
+export const recordShopCount = (id, data) => api.post(`/shop-settlements/${id}/record-count`, data);
+export const settleShop = (id, data) => api.post(`/shop-settlements/${id}/settle`, data);
+
 // Wastage
 export const getWastages = (params) => api.get('/wastage', { params });
 export const recordWastage = (data) => api.post('/wastage', data);
-export const processExpiredFoods = (locationId) => api.post('/wastage/process-expired', { location_id: locationId });
+export const processExpiredFoods = (locationId, data = {}) => api.post('/wastage/process-expired', { location_id: locationId, ...data });
 export const getShopSnapshot = (locationId) => api.get('/wastage/shop-snapshot', { params: { location_id: locationId } });
 
 // Reports

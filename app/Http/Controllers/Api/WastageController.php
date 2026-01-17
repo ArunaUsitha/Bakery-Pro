@@ -76,23 +76,27 @@ class WastageController extends Controller
     {
         $validated = $request->validate([
             'location_id' => 'required|exists:inventory_locations,id',
+            'force_all' => 'nullable|boolean',
         ]);
 
-        // Find all expired day foods at the location (at 12pm)
-        $expiredItems = Inventory::with('product')
+        $query = Inventory::with('product')
             ->where('inventory_location_id', $validated['location_id'])
             ->where('quantity', '>', 0)
             ->whereHas('product', function ($q) {
                 $q->where('category', 'day_food');
-            })
-            ->where('expiry_date', '<', today())
-            ->get();
+            });
+
+        if (!($validated['force_all'] ?? false)) {
+            $query->where('expiry_date', '<', today());
+        }
+
+        $items = $query->get();
 
         $totalWastage = 0;
         $processedItems = [];
 
-        DB::transaction(function () use ($expiredItems, $validated, &$totalWastage, &$processedItems) {
-            foreach ($expiredItems as $inventory) {
+        DB::transaction(function () use ($items, $validated, &$totalWastage, &$processedItems) {
+            foreach ($items as $inventory) {
                 $cost = $inventory->product->production_cost * $inventory->quantity;
 
                 Wastage::create([
@@ -102,7 +106,7 @@ class WastageController extends Controller
                     'cost' => $cost,
                     'reason' => 'expired',
                     'wastage_date' => today(),
-                    'notes' => 'Auto-processed at noon',
+                    'notes' => ($validated['force_all'] ?? false) ? 'Manual end-of-day clearing' : 'Auto-processed expired items',
                 ]);
 
                 $processedItems[] = [
@@ -118,7 +122,7 @@ class WastageController extends Controller
         });
 
         return response()->json([
-            'message' => 'Expired day foods processed',
+            'message' => ($validated['force_all'] ?? false) ? 'All day foods cleared' : 'Expired day foods processed',
             'total_wastage' => $totalWastage,
             'processed_items' => $processedItems,
         ]);

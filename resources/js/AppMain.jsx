@@ -13,6 +13,7 @@ import Ingredients from './pages/Ingredients';
 import Recipes from './pages/Recipes';
 import BasePreparations from './pages/BasePreparations';
 import Settings from './pages/Settings';
+import ShopSettlement from './pages/ShopSettlement';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './theme/tailadmin/context/ThemeContext';
@@ -64,6 +65,7 @@ function App() {
                                 <Route path="inventory" element={<Inventory />} />
                                 <Route path="sales" element={<Sales />} />
                                 <Route path="settlements" element={<VehicleSettlement />} />
+                                <Route path="shop-settlements" element={<ShopSettlement />} />
                                 <Route path="wastage" element={<Wastage />} />
 
                                 {/* Role Protected Sub-routes */}

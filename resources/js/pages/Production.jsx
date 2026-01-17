@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-    Plus,
-    Factory,
-    Package,
-    ChevronRight,
-    Clock,
-    CheckCircle,
-    Play,
-    Trash2,
-    Send,
     X,
     AlertCircle,
-    Loader2
+    Loader2,
+    Edit,
+    ChevronRight,
+    Clock,
+    Factory,
+    Package,
+    CheckCircle,
+    Send
 } from 'lucide-react';
 import {
+    transferFromProduction,
+    updateProductionItem,
     getTodayBatch,
     getProducts,
+    getLocations,
     addProductionItem,
     removeProductionItem,
-    completeBatch,
-    getLocations,
-    transferFromProduction
+    completeBatch
 } from '../utils/api';
 import { formatTime, formatNumber, getCurrentShiftStatus } from '../utils/formatters';
 import { useToast } from '../context/ToastContext';
@@ -31,6 +30,7 @@ import {
     BoxIconLine,
     ClockIcon,
 } from "../theme/tailadmin/icons";
+import { useAuth } from '../context/AuthContext';
 import {
     Table,
     TableBody,
@@ -55,6 +55,18 @@ function Production() {
     const [selectedProduct, setSelectedProduct] = useState('');
     const [quantity, setQuantity] = useState('');
     const [transferItems, setTransferItems] = useState([]);
+
+    // Edit Production Item State
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [editForm, setEditForm] = useState({
+        quantity: '',
+        password: '',
+        reason: ''
+    });
+
+    const { user } = useAuth();
+    const isAdmin = user?.roles?.some(r => r.name === 'admin');
     const toast = useToast();
     const shiftStatus = getCurrentShiftStatus();
 
@@ -104,6 +116,32 @@ function Production() {
             fetchData();
         } catch (error) {
             toast.error('Failed to remove item');
+        }
+    };
+
+    const handleEditClick = (item) => {
+        setEditingItem(item);
+        setEditForm({
+            quantity: item.quantity_produced.toString(),
+            password: '',
+            reason: ''
+        });
+        setShowEditModal(true);
+    };
+
+    const handleUpdateItem = async (e) => {
+        e.preventDefault();
+        try {
+            await updateProductionItem(batch.id, editingItem.id, {
+                quantity_produced: parseInt(editForm.quantity),
+                admin_password: editForm.password,
+                reason: editForm.reason
+            });
+            toast.success('Production item updated successfully');
+            setShowEditModal(false);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to update item');
         }
     };
 
@@ -349,7 +387,7 @@ function Production() {
                                 <TableCell isHeader px="px-4">Qty Produced</TableCell>
                                 <TableCell isHeader px="px-4">Completed</TableCell>
                                 <TableCell isHeader px="px-4">Status</TableCell>
-                                {batch?.status !== 'completed' && <TableCell isHeader px="px-4 text-right">Actions</TableCell>}
+                                {(batch?.status !== 'completed' || isAdmin) && <TableCell isHeader px="px-4 text-right">Actions</TableCell>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -393,14 +431,28 @@ function Production() {
                                                 {item.completed_at ? 'Ready' : 'In Progress'}
                                             </Badge>
                                         </TableCell>
-                                        {batch?.status !== 'completed' && (
+                                        {(batch?.status !== 'completed' || isAdmin) && (
                                             <TableCell className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => handleRemoveItem(item.id)}
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                                                >
-                                                    <TrashBinIcon className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex justify-end gap-2">
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => handleEditClick(item)}
+                                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-500 transition-colors"
+                                                            title="Edit quantity"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    )}
+                                                    {batch?.status !== 'completed' && (
+                                                        <button
+                                                            onClick={() => handleRemoveItem(item.id)}
+                                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                                            title="Remove item"
+                                                        >
+                                                            <TrashBinIcon className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         )}
                                     </TableRow>
@@ -451,6 +503,76 @@ function Production() {
                         </Button>
                         <Button type="submit" className="flex-1" startIcon={<PlusIcon />}>
                             Add to Batch
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Edit Item Modal (Admin Only) */}
+            <Modal
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                title={`Edit Production: ${editingItem?.product?.name || ''}`}
+            >
+                <form onSubmit={handleUpdateItem} className="p-6">
+                    <div className="space-y-6">
+                        <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
+                            <div className="flex gap-3">
+                                <AlertCircle className="text-blue-500 shrink-0" size={18} />
+                                <p className="text-xs text-blue-700 dark:text-blue-300">
+                                    You are altering a production record. This action will be logged for audit purposes.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label htmlFor="edit-quantity">Corrected Quantity *</Label>
+                            <Input
+                                id="edit-quantity"
+                                type="number"
+                                placeholder="Enter correct quantity"
+                                min="0"
+                                value={editForm.quantity}
+                                onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="admin-password">Admin Password *</Label>
+                            <Input
+                                id="admin-password"
+                                type="password"
+                                placeholder="Enter your password to verify"
+                                value={editForm.password}
+                                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                                required
+                            />
+                            <p className="mt-1 text-[10px] text-gray-400">
+                                Required to authorize this change.
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label htmlFor="edit-reason">Reason for Change *</Label>
+                            <textarea
+                                id="edit-reason"
+                                className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:focus:border-brand-500"
+                                placeholder="e.g., miscount, data entry error..."
+                                value={editForm.reason}
+                                onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })}
+                                rows="3"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowEditModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1 bg-brand-500" startIcon={<CheckCircle size={16} />}>
+                            Save Changes
                         </Button>
                     </div>
                 </form>

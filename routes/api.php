@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\BasePreparationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\ShopSettlementController;
 
 // Authentication (Public)
 Route::post('login', [AuthController::class, 'login']);
@@ -121,6 +122,11 @@ Route::middleware('auth')->group(function () {
     Route::post('settlements/initiate', [VehicleSettlementController::class, 'initiate']);
     Route::post('settlements/{settlement}/record-return', [VehicleSettlementController::class, 'recordReturn']);
     Route::post('settlements/{settlement}/settle', [VehicleSettlementController::class, 'settle']);
+
+    Route::apiResource('shop-settlements', ShopSettlementController::class)->only(['index', 'show']);
+    Route::post('shop-settlements/initiate', [ShopSettlementController::class, 'initiate']);
+    Route::post('shop-settlements/{shop_settlement}/record-count', [ShopSettlementController::class, 'recordCount']);
+    Route::post('shop-settlements/{shop_settlement}/settle', [ShopSettlementController::class, 'settle']);
 
     Route::apiResource('wastage', WastageController::class)->only(['index', 'store']);
     Route::post('wastage/process-expired', [WastageController::class, 'processExpiredDayFoods']);

@@ -127,16 +127,20 @@ function Wastage() {
         }
     };
 
-    const handleProcessExpired = async () => {
-        if (!confirm('This will remove all expired day foods from the selected location. Continue?')) return;
+    const handleProcessExpired = async (forceAll = false) => {
+        const message = forceAll
+            ? 'This will remove ALL day foods (even if not expired) from the selected location. Continue?'
+            : 'This will remove all expired day foods from the selected location. Continue?';
+
+        if (!confirm(message)) return;
 
         try {
-            const response = await processExpiredFoods(selectedLocation);
-            toast.success(`Processed ${response.data.processed_items?.length || 0} expired items`);
+            const response = await processExpiredFoods(selectedLocation, { force_all: forceAll });
+            toast.success(`Processed ${response.data.processed_items?.length || 0} items`);
             fetchData();
             fetchLocationInventory();
         } catch (error) {
-            toast.error('Failed to process expired foods');
+            toast.error('Failed to process foods');
         }
     };
 
@@ -188,16 +192,28 @@ function Wastage() {
                             </p>
                         </div>
                     </div>
-                    {expiringItems.length > 0 && (
-                        <Button
-                            variant="primary"
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={handleProcessExpired}
-                            startIcon={<Play size={16} />}
-                        >
-                            Process {expiringItems.length} Expired Items
-                        </Button>
-                    )}
+                    <div className="flex flex-wrap gap-3">
+                        {expiringItems.length > 0 && (
+                            <Button
+                                variant="primary"
+                                className="bg-orange-600 hover:bg-orange-700"
+                                onClick={() => handleProcessExpired(false)}
+                                startIcon={<Play size={16} />}
+                            >
+                                Process {expiringItems.length} Expired
+                            </Button>
+                        )}
+                        {inventory.some(i => i.product?.category === 'day_food') && (
+                            <Button
+                                variant="primary"
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => handleProcessExpired(true)}
+                                startIcon={<Trash2 size={16} />}
+                            >
+                                Clear All Day Foods
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 
