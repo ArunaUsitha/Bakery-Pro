@@ -21,7 +21,7 @@ class ProductionBatch extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(ProductionItem::class);
+        return $this->hasMany(ProductionItem::class, 'production_batch_id');
     }
 
     public function isCompleted(): bool

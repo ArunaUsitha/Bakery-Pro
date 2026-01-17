@@ -10,7 +10,9 @@ import {
     X,
     Plus,
     Play,
-    Store
+    Store,
+    Info,
+    Loader2
 } from 'lucide-react';
 import {
     getWastages,
@@ -22,6 +24,25 @@ import {
 } from '../utils/api';
 import { formatCurrency, formatDate, formatNumber, getCurrentShiftStatus } from '../utils/formatters';
 import { useToast } from '../context/ToastContext';
+import {
+    PlusIcon,
+    TrashBinIcon,
+    BoxIconLine,
+    ClockIcon,
+} from "../theme/tailadmin/icons";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableRow,
+} from "../theme/tailadmin/components/ui/table";
+import Badge from "../theme/tailadmin/components/ui/badge/Badge";
+import Button from "../theme/tailadmin/components/ui/button/Button";
+import Modal from "../theme/tailadmin/components/ui/modal/Modal";
+import Label from "../theme/tailadmin/components/form/Label";
+import Input from "../theme/tailadmin/components/form/input/InputField";
+import Select from "../theme/tailadmin/components/form/Select";
 
 function Wastage() {
     const [wastages, setWastages] = useState([]);
@@ -52,6 +73,7 @@ function Wastage() {
     }, [selectedLocation]);
 
     const fetchData = async () => {
+        setLoading(true);
         try {
             const [wastRes, locRes, prodRes] = await Promise.all([
                 getWastages({ date: new Date().toISOString().split('T')[0] }),
@@ -127,137 +149,155 @@ function Wastage() {
         return daysLeft <= 0;
     });
 
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="animate-spin text-brand-500" size={40} />
+            </div>
+        );
+    }
+
     return (
-        <div className="wastage-page">
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h2>Wastage Management</h2>
-                    <div className="page-breadcrumb">
-                        <Link to="/">Home</Link>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white/90">Wastage Management</h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Link to="/" className="hover:text-brand-500">Home</Link>
                         <ChevronRight size={14} />
                         <span>Wastage</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                        <Plus size={18} />
-                        Record Wastage
-                    </button>
-                </div>
+                <Button onClick={() => setShowAddModal(true)} startIcon={<PlusIcon />}>
+                    Record Wastage
+                </Button>
             </div>
 
-            {/* 12PM Reminder */}
-            <div className="card mb-6" style={{
-                background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
-                border: '1px solid #ef4444'
-            }}>
-                <div className="card-body flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="stat-icon danger">
+            {/* 12PM Reminder Banner */}
+            <div className="rounded-2xl border border-red-200 bg-red-50/50 p-5 dark:border-red-500/20 dark:bg-red-500/5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
                             <Clock size={24} />
                         </div>
                         <div>
-                            <div className="font-semibold text-danger-700">12PM - Day Food Expiry Check</div>
-                            <div className="text-sm text-danger-600">
-                                At 12PM each day, take note of remaining day foods and remove expired items.
-                            </div>
+                            <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">12PM - Day Food Expiry Check</h3>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Please verify remaining day foods and process expired items.
+                            </p>
                         </div>
                     </div>
                     {expiringItems.length > 0 && (
-                        <button className="btn btn-danger" onClick={handleProcessExpired}>
-                            <Play size={16} />
+                        <Button
+                            variant="primary"
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={handleProcessExpired}
+                            startIcon={<Play size={16} />}
+                        >
                             Process {expiringItems.length} Expired Items
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
 
-            {/* Stats */}
-            <div className="stats-grid mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                <div className="stat-card danger">
-                    <div className="stat-icon danger">
-                        <Trash2 size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Today's Wastage</div>
-                        <div className="stat-value">{formatCurrency(totalWastageCost)}</div>
-                    </div>
-                </div>
-                <div className="stat-card warning">
-                    <div className="stat-icon warning">
-                        <Package size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Items Wasted</div>
-                        <div className="stat-value">{formatNumber(totalWastageQty)}</div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Today's Cost */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500">
+                            <Trash2 size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Today's Cost</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{formatCurrency(totalWastageCost)}</h4>
+                        </div>
                     </div>
                 </div>
-                <div className="stat-card info">
-                    <div className="stat-icon info">
-                        <AlertTriangle size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Wastage Records</div>
-                        <div className="stat-value">{wastages.length}</div>
+
+                {/* Items Wasted */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-500">
+                            <Package size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Items Wasted</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{formatNumber(totalWastageQty)}</h4>
+                        </div>
                     </div>
                 </div>
-                <div className="stat-card primary">
-                    <div className="stat-icon primary">
-                        <Clock size={24} />
+
+                {/* Records Count */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-500">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Wastage Records</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{wastages.length}</h4>
+                        </div>
                     </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Expiring Now</div>
-                        <div className="stat-value">{expiringItems.length}</div>
+                </div>
+
+                {/* Expiring Count */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-500">
+                            <ClockIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Expiring Now</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{expiringItems.length}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Location Selection */}
-            <div className="card mb-6">
-                <div className="tabs">
-                    {locations.map(location => (
-                        <button
-                            key={location.id}
-                            className={`tab ${selectedLocation === location.id ? 'active' : ''}`}
-                            onClick={() => setSelectedLocation(location.id)}
-                        >
-                            <Store size={16} />
-                            <span className="ml-2">{location.name}</span>
-                        </button>
-                    ))}
-                </div>
+            {/* Location Tabs */}
+            <div className="flex flex-wrap gap-2 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-2 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                {locations.map(location => (
+                    <button
+                        key={location.id}
+                        onClick={() => setSelectedLocation(location.id)}
+                        className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${selectedLocation === location.id ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5'}`}
+                    >
+                        <Store size={16} />
+                        {location.name}
+                    </button>
+                ))}
             </div>
 
-            <div className="grid-2">
-                {/* Expiring Items */}
-                <div className="card">
-                    <div className="card-header">
-                        <h4 className="card-title">
-                            <AlertTriangle size={20} className="text-warning" />
-                            Expired / Expiring Items
-                        </h4>
-                    </div>
-                    <div className="table-container" style={{ maxHeight: '400px', overflow: 'auto' }}>
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Qty</th>
-                                    <th>Expiry</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Expiring Items Table */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-6 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <h4 className="flex items-center gap-2 text-lg font-bold text-gray-800 dark:text-white/90 mb-6">
+                        <AlertTriangle size={20} className="text-orange-500" />
+                        Expired / Expiring Items
+                    </h4>
+
+                    <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableCell isHeader px="px-4">Product</TableCell>
+                                    <TableCell isHeader px="px-4">Qty</TableCell>
+                                    <TableCell isHeader px="px-4">Expiry</TableCell>
+                                    <TableCell isHeader px="px-4">Status</TableCell>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {inventory.filter(item => {
                                     const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
                                     return daysLeft <= 1;
                                 }).length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" className="text-center p-6 text-muted">
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="py-20 text-center text-gray-500">
                                             No expiring items at this location
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ) : (
                                     inventory.filter(item => {
                                         const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
@@ -265,169 +305,173 @@ function Wastage() {
                                     }).map(item => {
                                         const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
                                         return (
-                                            <tr key={item.id}>
-                                                <td>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="avatar sm">{item.product.name.charAt(0)}</div>
-                                                        <span className="font-medium">{item.product.name}</span>
+                                            <TableRow key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                                                <TableCell className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 dark:bg-white/5 font-bold">
+                                                            {item.product.name.charAt(0)}
+                                                        </div>
+                                                        <span className="font-semibold text-gray-800 dark:text-white/90">{item.product.name}</span>
                                                     </div>
-                                                </td>
-                                                <td className="font-semibold">{item.quantity}</td>
-                                                <td>{formatDate(item.expiry_date)}</td>
-                                                <td>
-                                                    <span className={`badge ${daysLeft <= 0 ? 'badge-danger' : 'badge-warning'}`}>
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 font-bold text-gray-800 dark:text-white/90">{item.quantity}</TableCell>
+                                                <TableCell className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDate(item.expiry_date)}</TableCell>
+                                                <TableCell className="px-4 py-3">
+                                                    <Badge variant="light" color={daysLeft <= 0 ? 'red' : 'orange'}>
                                                         {daysLeft <= 0 ? 'Expired' : '1 Day Left'}
-                                                    </span>
-                                                </td>
-                                            </tr>
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
                                         );
                                     })
                                 )}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 </div>
 
-                {/* Today's Wastage Records */}
-                <div className="card">
-                    <div className="card-header">
-                        <h4 className="card-title">
-                            <Trash2 size={20} className="text-danger" />
-                            Today's Wastage Records
-                        </h4>
-                    </div>
-                    <div className="table-container" style={{ maxHeight: '400px', overflow: 'auto' }}>
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Qty</th>
-                                    <th>Cost</th>
-                                    <th>Reason</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                {/* Today's Records Table */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-6 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <h4 className="flex items-center gap-2 text-lg font-bold text-gray-800 dark:text-white/90 mb-6">
+                        <Trash2 size={20} className="text-red-500" />
+                        Today's Wastage Records
+                    </h4>
+
+                    <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableCell isHeader px="px-4">Product</TableCell>
+                                    <TableCell isHeader px="px-4">Qty</TableCell>
+                                    <TableCell isHeader px="px-4">Cost</TableCell>
+                                    <TableCell isHeader px="px-4">Reason</TableCell>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
                                 {wastages.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" className="text-center p-6 text-muted">
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="py-20 text-center text-gray-500">
                                             No wastage recorded today
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ) : (
                                     wastages.map(wastage => (
-                                        <tr key={wastage.id}>
-                                            <td>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="avatar sm" style={{ background: 'var(--gradient-danger)' }}>
+                                        <TableRow key={wastage.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                                            <TableCell className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500 dark:bg-red-500/10 font-bold">
                                                         {wastage.product.name.charAt(0)}
                                                     </div>
-                                                    <span className="font-medium">{wastage.product.name}</span>
+                                                    <span className="font-semibold text-gray-800 dark:text-white/90">{wastage.product.name}</span>
                                                 </div>
-                                            </td>
-                                            <td className="font-semibold">{wastage.quantity}</td>
-                                            <td className="text-danger font-semibold">{formatCurrency(wastage.cost)}</td>
-                                            <td>
-                                                <span className="badge badge-secondary">{wastage.reason}</span>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-gray-800 dark:text-white/90">{wastage.quantity}</TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-red-500">{formatCurrency(wastage.cost)}</TableCell>
+                                            <TableCell className="px-4 py-3">
+                                                <Badge variant="light" color="gray">
+                                                    {wastage.reason}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
                                     ))
                                 )}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 </div>
             </div>
 
             {/* Add Wastage Modal */}
-            {showAddModal && (
-                <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Record Wastage</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={() => setShowAddModal(false)}>
-                                <X size={20} />
-                            </button>
+            <Modal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                title="Record Wastage"
+            >
+                <form onSubmit={handleRecordWastage} className="p-6">
+                    <div className="space-y-6">
+                        <div>
+                            <Label htmlFor="product_id">Product *</Label>
+                            <Select
+                                id="product_id"
+                                value={formData.product_id}
+                                onChange={(val) => setFormData({ ...formData, product_id: val })}
+                                placeholder="Select a product"
+                                options={inventory.filter(inv => inv.quantity > 0).map(inv => ({
+                                    value: inv.product_id,
+                                    label: `${inv.product.name} (${inv.quantity} available)`
+                                }))}
+                            />
                         </div>
-                        <form onSubmit={handleRecordWastage}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Product *</label>
-                                    <select
-                                        className="form-select"
-                                        value={formData.product_id}
-                                        onChange={(e) => setFormData({ ...formData, product_id: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Select a product</option>
-                                        {inventory.filter(inv => inv.quantity > 0).map(inv => (
-                                            <option key={inv.product_id} value={inv.product_id}>
-                                                {inv.product.name} ({inv.quantity} available)
-                                            </option>
-                                        ))}
-                                    </select>
+                        <div>
+                            <Label htmlFor="quantity">Quantity *</Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                placeholder="Enter quantity"
+                                min="1"
+                                max={inventory.find(i => i.product_id == formData.product_id)?.quantity || 999}
+                                value={formData.quantity}
+                                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="reason">Reason</Label>
+                            <Select
+                                id="reason"
+                                value={formData.reason}
+                                onChange={(val) => setFormData({ ...formData, reason: val })}
+                                options={[
+                                    { value: 'expired', label: 'Expired' },
+                                    { value: 'damaged', label: 'Damaged' },
+                                    { value: 'quality_issue', label: 'Quality Issue' },
+                                    { value: 'other', label: 'Other' }
+                                ]}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="notes">Notes</Label>
+                            <textarea
+                                id="notes"
+                                className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:focus:border-brand-500"
+                                placeholder="Additional notes..."
+                                value={formData.notes}
+                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                rows="3"
+                            />
+                        </div>
+
+                        {formData.product_id && formData.quantity && (
+                            <div className="rounded-2xl bg-red-50 p-5 dark:bg-red-500/10">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-red-700 dark:text-red-300">Estimated Cost of Wastage:</span>
+                                    <span className="text-2xl font-black text-red-600 dark:text-red-400">
+                                        {formatCurrency(
+                                            (products.find(p => p.id == formData.product_id)?.production_cost || 0) * parseInt(formData.quantity)
+                                        )}
+                                    </span>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Quantity *</label>
-                                    <input
-                                        type="number"
-                                        className="form-input"
-                                        placeholder="Enter quantity"
-                                        min="1"
-                                        max={inventory.find(i => i.product_id == formData.product_id)?.quantity || 999}
-                                        value={formData.quantity}
-                                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Reason</label>
-                                    <select
-                                        className="form-select"
-                                        value={formData.reason}
-                                        onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                                    >
-                                        <option value="expired">Expired</option>
-                                        <option value="damaged">Damaged</option>
-                                        <option value="quality_issue">Quality Issue</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Notes</label>
-                                    <textarea
-                                        className="form-textarea"
-                                        placeholder="Additional notes..."
-                                        value={formData.notes}
-                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                        rows="2"
-                                    />
-                                </div>
-                                {formData.product_id && formData.quantity && (
-                                    <div className="p-3 rounded-lg bg-danger-50" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                                        <div className="flex justify-between">
-                                            <span>Estimated Cost:</span>
-                                            <span className="font-bold text-danger">
-                                                {formatCurrency(
-                                                    (products.find(p => p.id == formData.product_id)?.production_cost || 0) * parseInt(formData.quantity)
-                                                )}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-danger">
-                                    <Trash2 size={16} />
-                                    Record Wastage
-                                </button>
-                            </div>
-                        </form>
+                        )}
+
+                        <div className="flex items-center gap-3 rounded-xl border border-gray-100 p-4 dark:border-white/[0.03]">
+                            <Info size={20} className="shrink-0 text-gray-400" />
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Recorded wastage will be immediately deducted from the inventory of the selected location.
+                            </p>
+                        </div>
                     </div>
-                </div>
-            )}
+
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowAddModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700 text-white" startIcon={<TrashBinIcon className="h-4 w-4" />}>
+                            Record Wastage
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }

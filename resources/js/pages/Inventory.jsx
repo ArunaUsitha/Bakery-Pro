@@ -10,7 +10,8 @@ import {
     Plus,
     X,
     AlertTriangle,
-    Calendar
+    Calendar,
+    Loader2
 } from 'lucide-react';
 import {
     getInventory,
@@ -20,6 +21,23 @@ import {
 } from '../utils/api';
 import { formatCurrency, formatDate, formatNumber, isExpired } from '../utils/formatters';
 import { useToast } from '../context/ToastContext';
+import {
+    PlusIcon,
+    BoxIconLine,
+} from "../theme/tailadmin/icons";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableRow,
+} from "../theme/tailadmin/components/ui/table";
+import Badge from "../theme/tailadmin/components/ui/badge/Badge";
+import Button from "../theme/tailadmin/components/ui/button/Button";
+import Modal from "../theme/tailadmin/components/ui/modal/Modal";
+import Label from "../theme/tailadmin/components/form/Label";
+import Input from "../theme/tailadmin/components/form/input/InputField";
+import Select from "../theme/tailadmin/components/form/Select";
 
 function Inventory() {
     const [inventory, setInventory] = useState([]);
@@ -143,260 +161,279 @@ function Inventory() {
         return daysLeft <= 1 && daysLeft >= 0;
     });
 
-    const shop = locations.find(l => l.type === 'shop');
-    const vehicles = locations.filter(l => l.type === 'vehicle');
+    if (loading && locations.length === 0) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="animate-spin text-brand-500" size={40} />
+            </div>
+        );
+    }
 
     return (
-        <div className="inventory-page">
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h2>Inventory</h2>
-                    <div className="page-breadcrumb">
-                        <Link to="/">Home</Link>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white/90">Inventory Management</h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Link to="/" className="hover:text-brand-500">Home</Link>
                         <ChevronRight size={14} />
                         <span>Inventory</span>
                     </div>
                 </div>
-                <button className="btn btn-primary" onClick={openTransferModal} disabled={inventory.length === 0}>
-                    <ArrowRightLeft size={18} />
+                <Button onClick={openTransferModal} disabled={inventory.length === 0} startIcon={<ArrowRightLeft size={18} />}>
                     Transfer Stock
-                </button>
+                </Button>
             </div>
 
-            {/* Stats */}
-            <div className="stats-grid mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                <div className="stat-card primary">
-                    <div className="stat-icon primary">
-                        <Warehouse size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Total Items</div>
-                        <div className="stat-value">{formatNumber(totalItems)}</div>
-                    </div>
-                </div>
-                <div className="stat-card success">
-                    <div className="stat-icon success">
-                        <Package size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Product Types</div>
-                        <div className="stat-value">{inventory.length}</div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Total Items */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-500">
+                            <Warehouse size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Items</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{formatNumber(totalItems)}</h4>
+                        </div>
                     </div>
                 </div>
-                <div className="stat-card info">
-                    <div className="stat-icon info">
-                        <Store size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Inventory Value</div>
-                        <div className="stat-value" style={{ fontSize: '1.25rem' }}>{formatCurrency(totalValue)}</div>
+
+                {/* Product Types */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 dark:bg-green-500/10 text-green-500">
+                            <Package size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Product Types</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{inventory.length}</h4>
+                        </div>
                     </div>
                 </div>
-                <div className="stat-card warning">
-                    <div className="stat-icon warning">
-                        <AlertTriangle size={24} />
+
+                {/* Inventory Value */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-500">
+                            <Store size={24} />
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Stock Value</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90 truncate">{formatCurrency(totalValue)}</h4>
+                        </div>
                     </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Expiring Today</div>
-                        <div className="stat-value">{expiringItems.length}</div>
+                </div>
+
+                {/* Expiring Today */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Expiring Today</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{expiringItems.length}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Location Tabs */}
-            <div className="card mb-6">
-                <div className="tabs">
-                    {locations.map(location => (
-                        <button
-                            key={location.id}
-                            className={`tab ${selectedLocation === location.id ? 'active' : ''}`}
-                            onClick={() => setSelectedLocation(location.id)}
-                        >
-                            {location.type === 'shop' ? <Store size={16} /> : <Truck size={16} />}
-                            <span className="ml-2">{location.name}</span>
-                        </button>
-                    ))}
-                </div>
+            <div className="flex flex-wrap gap-2 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-2 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                {locations.map(location => (
+                    <button
+                        key={location.id}
+                        onClick={() => setSelectedLocation(location.id)}
+                        className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${selectedLocation === location.id ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5'}`}
+                    >
+                        {location.type === 'shop' ? <Store size={16} /> : <Truck size={16} />}
+                        {location.name}
+                    </button>
+                ))}
             </div>
 
             {/* Inventory Table */}
-            <div className="card">
-                <div className="card-header">
-                    <h4 className="card-title">
-                        {currentLocation?.type === 'shop' ? <Store size={20} className="text-primary" /> : <Truck size={20} className="text-primary" />}
-                        {currentLocation?.name || 'All Locations'} Inventory
+            <div className="rounded-2xl border border-gray-100 bg-white p-6 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+                    <h4 className="flex items-center gap-2 text-lg font-bold text-gray-800 dark:text-white/90">
+                        {currentLocation?.type === 'shop' ? <Store size={20} className="text-brand-500" /> : <Truck size={20} className="text-brand-500" />}
+                        {currentLocation?.name || 'Inventory Overview'}
                     </h4>
-                    <span className="text-muted text-sm">
-                        {inventory.length} product types • {formatNumber(totalItems)} total items
+                    <span className="rounded-lg bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-500 dark:bg-white/5 dark:text-gray-400">
+                        {inventory.length} products • {formatNumber(totalItems)} items
                     </span>
                 </div>
-                <div className="table-container">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Category</th>
-                                <th>Quantity</th>
-                                <th>Production Date</th>
-                                <th>Expiry Date</th>
-                                <th>Value</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+
+                <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableCell isHeader px="px-4">Product</TableCell>
+                                <TableCell isHeader px="px-4">Category</TableCell>
+                                <TableCell isHeader px="px-4">Qty</TableCell>
+                                <TableCell isHeader px="px-4">Production</TableCell>
+                                <TableCell isHeader px="px-4">Expiry</TableCell>
+                                <TableCell isHeader px="px-4">Value</TableCell>
+                                <TableCell isHeader px="px-4">Status</TableCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {loading ? (
-                                <tr>
-                                    <td colSpan="7" className="text-center p-6">
-                                        <div className="spinner mx-auto"></div>
-                                    </td>
-                                </tr>
+                                <TableRow>
+                                    <TableCell colSpan={7} className="py-20 text-center">
+                                        <Loader2 className="mx-auto animate-spin text-brand-500" size={32} />
+                                    </TableCell>
+                                </TableRow>
                             ) : inventory.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7">
-                                        <div className="empty-state">
-                                            <div className="empty-state-icon">
-                                                <Warehouse size={40} />
-                                            </div>
-                                            <h3>No inventory at this location</h3>
-                                            <p>Transfer stock from production or another location</p>
+                                <TableRow>
+                                    <TableCell colSpan={7} className="py-20 text-center">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Warehouse className="mb-4 text-gray-300" size={48} />
+                                            <h5 className="text-base font-semibold text-gray-800 dark:text-white/90">No inventory found</h5>
+                                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Location has no stock at the moment</p>
                                         </div>
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ) : (
                                 inventory.map((item) => {
                                     const expired = isExpired(item.expiry_date);
                                     const daysLeft = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
 
                                     return (
-                                        <tr key={item.id} className={expired ? 'opacity-50' : ''}>
-                                            <td>
+                                        <TableRow key={item.id} className={`${expired ? 'opacity-50' : ''} hover:bg-gray-50 dark:hover:bg-white/[0.01]`}>
+                                            <TableCell className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="avatar sm">{item.product.name.charAt(0)}</div>
-                                                    <span className="font-medium">{item.product.name}</span>
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 dark:bg-white/5 font-bold">
+                                                        {item.product.name.charAt(0)}
+                                                    </div>
+                                                    <span className="font-semibold text-gray-800 dark:text-white/90">{item.product.name}</span>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${item.product.category === 'day_food' ? 'badge-warning' : 'badge-info'}`}>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3">
+                                                <Badge variant="light" color={item.product.category === 'day_food' ? 'orange' : 'blue'}>
                                                     {item.product.category === 'day_food' ? 'Day Food' : 'Packed'}
-                                                </span>
-                                            </td>
-                                            <td className="font-semibold">{formatNumber(item.quantity)}</td>
-                                            <td>{formatDate(item.production_date)}</td>
-                                            <td>
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar size={14} className="text-muted" />
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-gray-800 dark:text-white/90">{formatNumber(item.quantity)}</TableCell>
+                                            <TableCell className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{formatDate(item.production_date)}</TableCell>
+                                            <TableCell className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                                <div className="flex items-center gap-1.5 font-medium">
+                                                    <Calendar size={14} />
                                                     {formatDate(item.expiry_date)}
                                                 </div>
-                                            </td>
-                                            <td className="font-semibold">{formatCurrency(item.quantity * item.product.selling_price)}</td>
-                                            <td>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 font-bold text-brand-500">{formatCurrency(item.quantity * item.product.selling_price)}</TableCell>
+                                            <TableCell className="px-4 py-3">
                                                 {expired ? (
-                                                    <span className="badge badge-danger">Expired</span>
+                                                    <Badge variant="light" color="red">Expired</Badge>
                                                 ) : daysLeft === 0 ? (
-                                                    <span className="badge badge-warning">Expires Today</span>
+                                                    <Badge variant="light" color="red">Expires Today</Badge>
                                                 ) : daysLeft === 1 ? (
-                                                    <span className="badge badge-warning">1 Day Left</span>
+                                                    <Badge variant="light" color="orange">1 Day Left</Badge>
                                                 ) : (
-                                                    <span className="badge badge-success">{daysLeft} Days Left</span>
+                                                    <Badge variant="light" color="green">{daysLeft} Days Left</Badge>
                                                 )}
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     );
                                 })
                             )}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
             </div>
 
             {/* Transfer Modal */}
-            {showTransferModal && (
-                <div className="modal-overlay" onClick={() => setShowTransferModal(false)}>
-                    <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Transfer Stock</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={() => setShowTransferModal(false)}>
-                                <X size={20} />
-                            </button>
+            <Modal
+                isOpen={showTransferModal}
+                onClose={() => setShowTransferModal(false)}
+                title="Transfer Stock"
+                size="lg"
+            >
+                <div className="p-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-8">
+                        <div>
+                            <Label htmlFor="from_location">From Location</Label>
+                            <Select
+                                id="from_location"
+                                value={transferData.from_location_id}
+                                onChange={(val) => setTransferData({
+                                    ...transferData,
+                                    from_location_id: val,
+                                    transfer_type: locations.find(l => l.id == val)?.type === 'vehicle'
+                                        ? 'vehicle_to_shop'
+                                        : 'shop_to_vehicle'
+                                })}
+                                options={locations.map(loc => ({
+                                    value: loc.id,
+                                    label: loc.name
+                                }))}
+                            />
                         </div>
-                        <div className="modal-body">
-                            <div className="form-row mb-4">
-                                <div className="form-group">
-                                    <label className="form-label">From Location</label>
-                                    <select
-                                        className="form-select"
-                                        value={transferData.from_location_id}
-                                        onChange={(e) => setTransferData({
-                                            ...transferData,
-                                            from_location_id: e.target.value,
-                                            transfer_type: locations.find(l => l.id == e.target.value)?.type === 'vehicle'
-                                                ? 'vehicle_to_shop'
-                                                : 'shop_to_vehicle'
-                                        })}
-                                    >
-                                        {locations.map(loc => (
-                                            <option key={loc.id} value={loc.id}>{loc.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">To Location</label>
-                                    <select
-                                        className="form-select"
-                                        value={transferData.to_location_id}
-                                        onChange={(e) => setTransferData({ ...transferData, to_location_id: e.target.value })}
-                                    >
-                                        {locations.filter(l => l.id != transferData.from_location_id).map(loc => (
-                                            <option key={loc.id} value={loc.id}>{loc.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="table-container">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Product</th>
-                                            <th>Available</th>
-                                            <th>Transfer Qty</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {transferData.items.map((item, idx) => (
-                                            <tr key={idx}>
-                                                <td className="font-medium">{item.product_name}</td>
-                                                <td>{item.available}</td>
-                                                <td>
-                                                    <input
-                                                        type="number"
-                                                        className="form-input"
-                                                        style={{ width: '100px' }}
-                                                        min="0"
-                                                        max={item.available}
-                                                        value={item.quantity}
-                                                        onChange={(e) => updateTransferQty(idx, e.target.value)}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowTransferModal(false)}>
-                                Cancel
-                            </button>
-                            <button className="btn btn-primary" onClick={handleTransfer}>
-                                <ArrowRightLeft size={16} />
-                                Transfer
-                            </button>
+                        <div>
+                            <Label htmlFor="to_location">To Location</Label>
+                            <Select
+                                id="to_location"
+                                value={transferData.to_location_id}
+                                onChange={(val) => setTransferData({ ...transferData, to_location_id: val })}
+                                options={locations.filter(l => l.id != transferData.from_location_id).map(loc => ({
+                                    value: loc.id,
+                                    label: loc.name
+                                }))}
+                            />
                         </div>
                     </div>
+
+                    <div className="space-y-4">
+                        <h4 className="font-bold text-gray-800 dark:text-white/90">Select Items to Transfer</h4>
+                        <div className="max-h-[400px] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableCell isHeader px="px-4">Product</TableCell>
+                                        <TableCell isHeader px="px-4 text-center">Available</TableCell>
+                                        <TableCell isHeader px="px-4 text-center">Transfer Qty</TableCell>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {transferData.items.map((item, idx) => (
+                                        <TableRow key={idx} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                                            <TableCell className="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
+                                                {item.product_name}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                                                {item.available}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
+                                                <input
+                                                    type="number"
+                                                    className="w-24 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-center text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:focus:border-brand-500"
+                                                    min="0"
+                                                    max={item.available}
+                                                    value={item.quantity}
+                                                    onChange={(e) => updateTransferQty(idx, e.target.value)}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowTransferModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button className="flex-1" onClick={handleTransfer} startIcon={<ArrowRightLeft size={16} />}>
+                            Complete Transfer
+                        </Button>
+                    </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

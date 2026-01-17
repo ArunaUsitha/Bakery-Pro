@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
     {
         // Create roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $managerRole = Role::firstOrCreate(['name' => 'manager']);
-        $userRole = Role::firstOrCreate(['name' => 'user']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
+        $deliveryRiderRole = Role::firstOrCreate(['name' => 'delivery_rider']);
 
         // Create users
         $admin = User::updateOrCreate(
@@ -32,41 +32,65 @@ class DatabaseSeeder extends Seeder
         );
         $admin->assignRole($adminRole);
 
-        $manager = User::create([
-            'name' => 'Manager User',
-            'email' => 'manager@bakery.com',
-            'password' => Hash::make('password'),
-        ]);
-        $manager->assignRole($managerRole);
+        $supervisor = User::updateOrCreate(
+            ['username' => 'supervisor'],
+            [
+                'name' => 'Supervisor',
+                'email' => 'supervisor@bakery.com',
+                'password' => Hash::make('password'),
+            ]
+        );
+        $supervisor->assignRole($supervisorRole);
 
-        $user = User::create([
-            'name' => 'Regular User',
-            'email' => 'user@bakery.com',
-            'password' => Hash::make('password'),
-        ]);
-        $user->assignRole($userRole);
+        $rider1 = User::updateOrCreate(
+            ['username' => 'rider1'],
+            [
+                'name' => 'Delivery Rider 1',
+                'email' => 'rider1@bakery.com',
+                'password' => Hash::make('password'),
+            ]
+        );
+        $rider1->assignRole($deliveryRiderRole);
+
+        $rider2 = User::updateOrCreate(
+            ['username' => 'rider2'],
+            [
+                'name' => 'Delivery Rider 2',
+                'email' => 'rider2@bakery.com',
+                'password' => Hash::make('password'),
+            ]
+        );
+        $rider2->assignRole($deliveryRiderRole);
 
         // Create inventory locations
-        InventoryLocation::create([
-            'name' => 'Main Shop',
-            'type' => 'shop',
-            'description' => 'Main bakery shop',
-            'is_active' => true,
-        ]);
+        InventoryLocation::updateOrCreate(
+            ['name' => 'Main Shop'],
+            [
+                'type' => 'shop',
+                'description' => 'Main bakery shop',
+                'is_active' => true,
+            ]
+        );
 
-        InventoryLocation::create([
-            'name' => 'Delivery Vehicle 1',
-            'type' => 'vehicle',
-            'description' => 'Primary delivery vehicle',
-            'is_active' => true,
-        ]);
+        InventoryLocation::updateOrCreate(
+            ['name' => 'Delivery Vehicle 1'],
+            [
+                'type' => 'vehicle',
+                'description' => 'Primary delivery vehicle',
+                'is_active' => true,
+                'float_cash' => 2000.00,
+            ]
+        );
 
-        InventoryLocation::create([
-            'name' => 'Delivery Vehicle 2',
-            'type' => 'vehicle',
-            'description' => 'Secondary delivery vehicle',
-            'is_active' => true,
-        ]);
+        InventoryLocation::updateOrCreate(
+            ['name' => 'Delivery Vehicle 2'],
+            [
+                'type' => 'vehicle',
+                'description' => 'Secondary delivery vehicle',
+                'is_active' => true,
+                'float_cash' => 2000.00,
+            ]
+        );
 
         // Products from Recipe Cost Calculator Excel sheet
         // Day Foods - 1 day shelf life
@@ -132,7 +156,10 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Run recipe seeder
-        $this->call(RecipeSeeder::class);
+        // Run seeders
+        $this->call([
+            PermissionSeeder::class,
+            RecipeSeeder::class,
+        ]);
     }
 }

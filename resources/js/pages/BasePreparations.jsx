@@ -10,8 +10,28 @@ import {
     DollarSign,
     Package,
     RefreshCw,
-    Scale
+    Scale,
+    Info,
+    Loader2
 } from 'lucide-react';
+import {
+    PlusIcon,
+    PencilIcon,
+    TrashBinIcon,
+} from "../theme/tailadmin/icons";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableRow,
+} from "../theme/tailadmin/components/ui/table";
+import Badge from "../theme/tailadmin/components/ui/badge/Badge";
+import Button from "../theme/tailadmin/components/ui/button/Button";
+import Modal from "../theme/tailadmin/components/ui/modal/Modal";
+import Label from "../theme/tailadmin/components/form/Label";
+import Input from "../theme/tailadmin/components/form/input/InputField";
+import Select from "../theme/tailadmin/components/form/Select";
 import {
     getBasePreparations,
     getBasePreparation,
@@ -51,6 +71,7 @@ function BasePreparations() {
     }, []);
 
     const fetchData = async () => {
+        setLoading(true);
         try {
             const [prepsRes, ingredientsRes] = await Promise.all([
                 getBasePreparations(),
@@ -169,430 +190,439 @@ function BasePreparations() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="spinner"></div>
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="animate-spin text-brand-500" size={40} />
             </div>
         );
     }
 
     return (
-        <div className="base-preparations-page">
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h2>Base Preparations</h2>
-                    <div className="page-breadcrumb">
-                        <Link to="/">Home</Link>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white/90">Base Preparations</h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Link to="/" className="hover:text-brand-500">Home</Link>
                         <ChevronRight size={14} />
-                        <Link to="/recipes">Recipes</Link>
+                        <Link to="/recipes" className="hover:text-brand-500">Recipes</Link>
                         <ChevronRight size={14} />
                         <span>Base Preparations</span>
                     </div>
                 </div>
-                <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
-                    <Plus size={18} />
+                <Button onClick={() => { resetForm(); setShowModal(true); }} startIcon={<PlusIcon />}>
                     Create Base Preparation
-                </button>
+                </Button>
             </div>
 
             {/* Info Banner */}
-            <div className="card mb-6" style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(168, 85, 247, 0.05))',
-                border: '1px solid rgba(139, 92, 246, 0.2)'
-            }}>
-                <div className="card-body">
-                    <div className="flex items-center gap-4">
-                        <div className="stat-icon warning" style={{ width: 48, height: 48 }}>
-                            <Layers size={24} />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold mb-1">What are Base Preparations?</h3>
-                            <p className="text-muted text-sm mb-0">
-                                Base preparations are shared doughs, mixtures, or batters that are used across multiple recipes.
-                                For example, a "Bun Dough Base" can be used to make both T-Buns and Cream Buns,
-                                with the cost distributed proportionally based on weight used.
-                            </p>
-                        </div>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-5 dark:border-blue-500/20 dark:bg-blue-500/5">
+                <div className="flex gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-500/20">
+                        <Info className="text-blue-600 dark:text-blue-400" size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">What are Base Preparations?</h3>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            Base preparations are shared doughs, mixtures, or batters that are used across multiple recipes.
+                            For example, a "Bun Dough Base" can be used to make both T-Buns and Cream Buns,
+                            with the cost distributed proportionally based on weight used.
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="stats-grid mb-6" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div className="stat-card primary">
-                    <div className="stat-icon primary">
-                        <Layers size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Total Preparations</div>
-                        <div className="stat-value">{preparations.length}</div>
-                    </div>
-                </div>
-                <div className="stat-card success">
-                    <div className="stat-icon success">
-                        <DollarSign size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Total Cost</div>
-                        <div className="stat-value">{formatCurrency(totalPrepsCost)}</div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Total Preparations */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-500/10">
+                            <Layers className="text-brand-500" size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Preparations</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{preparations.length}</h4>
+                        </div>
                     </div>
                 </div>
-                <div className="stat-card info">
-                    <div className="stat-icon info">
-                        <Package size={24} />
+
+                {/* Total Cost */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 dark:bg-green-500/10">
+                            <DollarSign className="text-green-500" size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Cost</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{formatCurrency(totalPrepsCost)}</h4>
+                        </div>
                     </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Available Ingredients</div>
-                        <div className="stat-value">{ingredients.length}</div>
+                </div>
+
+                {/* Available Ingredients */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-500/10">
+                            <Package className="text-orange-500" size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Available Ingredients</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{ingredients.length}</h4>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Preparations Grid */}
-            <div className="grid-3 gap-6">
-                {preparations.length === 0 ? (
-                    <div className="card" style={{ gridColumn: 'span 3' }}>
-                        <div className="empty-state">
-                            <div className="empty-state-icon">
-                                <Layers size={40} />
-                            </div>
-                            <h3>No base preparations yet</h3>
-                            <p>Create a base preparation like "Bun Dough Base" to share across recipes</p>
-                            <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
-                                <Plus size={18} />
-                                Create Base Preparation
-                            </button>
-                        </div>
+            {preparations.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 py-20 text-center dark:border-gray-800">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800/50">
+                        <Layers className="text-gray-400" size={32} />
                     </div>
-                ) : (
-                    preparations.map(prep => (
-                        <div key={prep.id} className="card hover-lift">
-                            <div className="card-body">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="stat-icon warning" style={{ width: 44, height: 44 }}>
-                                            <Layers size={20} />
+                    <h3 className="mt-4 text-lg font-semibold text-gray-800 dark:text-white/90">No base preparations yet</h3>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">Create a base preparation like "Bun Dough Base" to share across recipes</p>
+                    <Button onClick={() => { resetForm(); setShowModal(true); }} className="mt-6" startIcon={<PlusIcon />}>
+                        Create Base Preparation
+                    </Button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {preparations.map(prep => (
+                        <div key={prep.id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all hover:shadow-lg dark:border-white/[0.03] dark:bg-white/[0.03]">
+                            <div className="p-6">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning-50 dark:bg-warning-500/10">
+                                            <Layers className="text-warning-500" size={24} />
                                         </div>
                                         <div>
-                                            <h4 className="font-semibold">{prep.name}</h4>
+                                            <h4 className="font-bold text-gray-800 dark:text-white/90">{prep.name}</h4>
                                             {prep.description && (
-                                                <span className="text-sm text-muted">{prep.description}</span>
+                                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{prep.description}</p>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid-2 gap-3 mb-4">
-                                    <div className="p-3 rounded-lg bg-tertiary text-center">
-                                        <div className="flex items-center justify-center gap-1 text-xs text-muted mb-1">
+                                <div className="mt-6 grid grid-cols-2 gap-4">
+                                    <div className="rounded-xl bg-gray-50 p-3 text-center dark:bg-white/[0.03]">
+                                        <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                             <Scale size={12} />
-                                            Total Weight
+                                            Weight
                                         </div>
-                                        <div className="font-bold">{formatNumber(prep.total_weight_kg)} kg</div>
+                                        <div className="mt-1 text-sm font-bold text-gray-800 dark:text-white/90">{formatNumber(prep.total_weight_kg)} kg</div>
                                     </div>
-                                    <div className="p-3 rounded-lg bg-tertiary text-center">
-                                        <div className="text-xs text-muted mb-1">Cost/kg</div>
-                                        <div className="font-bold text-primary">{formatCurrency(prep.cost_per_kg)}</div>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 rounded-lg mb-4" style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-muted">Total Cost</span>
-                                        <span className="text-lg font-bold text-warning">{formatCurrency(prep.total_cost)}</span>
+                                    <div className="rounded-xl bg-gray-50 p-3 text-center dark:bg-white/[0.03]">
+                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Cost/kg</div>
+                                        <div className="mt-1 text-sm font-bold text-brand-500">{formatCurrency(prep.cost_per_kg)}</div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="badge badge-secondary">
+                                <div className="mt-4 rounded-xl bg-amber-50 p-4 dark:bg-amber-500/5">
+                                    <div className="flex items-center justify-between font-bold">
+                                        <span className="text-sm text-amber-900 dark:text-amber-200">Total Cost</span>
+                                        <span className="text-lg text-amber-600 dark:text-amber-400">{formatCurrency(prep.total_cost)}</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex items-center gap-2">
+                                    <Badge variant="light" color="blue">
                                         <Package size={12} className="mr-1" />
                                         {prep.ingredients?.length || 0} ingredients
-                                    </span>
+                                    </Badge>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        className="btn btn-sm btn-primary flex-1"
+                                <div className="mt-6 flex items-center gap-2">
+                                    <Button
+                                        variant="primary"
+                                        size="sm"
+                                        className="flex-1"
                                         onClick={() => openDetailModal(prep)}
                                     >
                                         View & Manage
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-info"
-                                        onClick={() => handleRecalculate(prep.id)}
-                                        title="Recalculate Cost"
-                                    >
-                                        <RefreshCw size={14} />
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-secondary"
-                                        onClick={() => openEditModal(prep)}
-                                        title="Edit"
-                                    >
-                                        <Edit size={14} />
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-danger"
-                                        onClick={() => handleDelete(prep.id)}
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => handleRecalculate(prep.id)}
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-100 bg-white text-gray-500 transition-colors hover:bg-gray-50 hover:text-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
+                                            title="Recalculate Cost"
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => openEditModal(prep)}
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-100 bg-white text-gray-500 transition-colors hover:bg-gray-50 hover:text-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
+                                            title="Edit"
+                                        >
+                                            <PencilIcon className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(prep.id)}
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-100 bg-white text-gray-500 transition-colors hover:bg-red-50 hover:text-red-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
+                                            title="Delete"
+                                        >
+                                            <TrashBinIcon className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    ))
-                )}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Create/Edit Modal */}
-            {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>{editingItem ? 'Edit Base Preparation' : 'Create Base Preparation'}</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={() => setShowModal(false)}>
-                                <X size={20} />
-                            </button>
+            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingItem ? 'Edit Base Preparation' : 'Create Base Preparation'}>
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="name">Name *</Label>
+                            <Input
+                                id="name"
+                                type="text"
+                                placeholder="e.g., Bun Dough Base, Cake Batter..."
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                required
+                            />
                         </div>
-                        <form onSubmit={handleSubmit}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Name *</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="e.g., Bun Dough Base, Cake Batter..."
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Description</label>
-                                    <textarea
-                                        className="form-textarea"
-                                        placeholder="What is this preparation used for?"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        rows="2"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Total Weight (kg) *</label>
-                                    <input
-                                        type="number"
-                                        className="form-input"
-                                        placeholder="Total weight when prepared"
-                                        step="0.001"
-                                        min="0.001"
-                                        value={formData.total_weight_kg}
-                                        onChange={(e) => setFormData({ ...formData, total_weight_kg: e.target.value })}
-                                        required
-                                    />
-                                    <div className="form-hint">
-                                        The total weight of the finished preparation (used to calculate cost per kg)
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-primary">
-                                    {editingItem ? 'Update' : 'Create'}
-                                </button>
-                            </div>
-                        </form>
+                        <div>
+                            <Label htmlFor="description">Description</Label>
+                            <textarea
+                                id="description"
+                                className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:focus:border-brand-500"
+                                placeholder="What is this preparation used for?"
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                rows="3"
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="total_weight_kg">Total Weight (kg) *</Label>
+                            <Input
+                                id="total_weight_kg"
+                                type="number"
+                                placeholder="Total weight when prepared"
+                                step="0.001"
+                                min="0.001"
+                                value={formData.total_weight_kg}
+                                onChange={(e) => setFormData({ ...formData, total_weight_kg: e.target.value })}
+                                required
+                            />
+                            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                The total weight of the finished preparation (used to calculate cost per kg)
+                            </p>
+                        </div>
                     </div>
-                </div>
-            )}
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1">
+                            {editingItem ? 'Update Preparation' : 'Create Preparation'}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
 
             {/* Detail Modal */}
-            {showDetailModal && selectedPrep && (
-                <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
-                    <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
-                        <div className="modal-header">
-                            <h3>{selectedPrep.name}</h3>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className="btn btn-sm btn-info"
-                                    onClick={() => handleRecalculate(selectedPrep.id)}
-                                >
-                                    <RefreshCw size={14} />
-                                    Recalculate
-                                </button>
-                                <button className="btn-ghost btn-icon sm" onClick={() => setShowDetailModal(false)}>
-                                    <X size={20} />
-                                </button>
+            <Modal
+                isOpen={showDetailModal}
+                onClose={() => setShowDetailModal(false)}
+                title={selectedPrep?.name}
+                size="lg"
+            >
+                {selectedPrep && (
+                    <div className="p-6">
+                        {/* Action Header in Modal */}
+                        <div className="mb-6 flex items-center justify-between">
+                            <h4 className="text-lg font-bold text-gray-800 dark:text-white/90">Details & Ingredients</h4>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRecalculate(selectedPrep.id)}
+                                startIcon={<RefreshCw className="h-3.5 w-3.5" />}
+                            >
+                                Recalculate
+                            </Button>
+                        </div>
+
+                        {/* Cost Summary Cards */}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
+                            <div className="rounded-2xl bg-gray-50 p-4 text-center dark:bg-white/[0.03]">
+                                <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Weight</p>
+                                <h5 className="mt-1 text-xl font-bold text-gray-800 dark:text-white/90">{formatNumber(selectedPrep.total_weight_kg)} <span className="text-sm font-normal text-gray-400">kg</span></h5>
+                            </div>
+                            <div className="rounded-2xl bg-brand-50 p-4 text-center dark:bg-brand-500/10">
+                                <p className="text-xs uppercase tracking-wider text-brand-500 dark:text-brand-400">Total Cost</p>
+                                <h5 className="mt-1 text-xl font-bold text-brand-600 dark:text-brand-400">{formatCurrency(selectedPrep.total_cost)}</h5>
+                            </div>
+                            <div className="rounded-2xl bg-amber-50 p-4 text-center dark:bg-amber-500/10">
+                                <p className="text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">Cost/kg</p>
+                                <h5 className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(selectedPrep.cost_per_kg)}</h5>
                             </div>
                         </div>
-                        <div className="modal-body">
-                            {/* Cost Summary */}
-                            <div className="grid-3 gap-4 mb-6">
-                                <div className="p-4 rounded-xl bg-tertiary text-center">
-                                    <div className="text-sm text-muted mb-1">Total Weight</div>
-                                    <div className="text-2xl font-bold">{formatNumber(selectedPrep.total_weight_kg)}</div>
-                                    <div className="text-xs text-muted">kg</div>
-                                </div>
-                                <div className="p-4 rounded-xl bg-tertiary text-center">
-                                    <div className="text-sm text-muted mb-1">Total Cost</div>
-                                    <div className="text-2xl font-bold text-primary">{formatCurrency(selectedPrep.total_cost)}</div>
-                                </div>
-                                <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(245, 158, 11, 0.1)' }}>
-                                    <div className="text-sm text-muted mb-1">Cost Per kg</div>
-                                    <div className="text-2xl font-bold text-warning">{formatCurrency(selectedPrep.cost_per_kg)}</div>
-                                </div>
-                            </div>
 
-                            {/* Ingredients */}
-                            <div className="flex items-center justify-between mb-3">
-                                <h4 className="font-semibold flex items-center gap-2">
-                                    <Package size={18} className="text-primary" />
-                                    Ingredients
+                        {/* Ingredients Section */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h4 className="flex items-center gap-2 font-bold text-gray-800 dark:text-white/90">
+                                    <Package size={20} className="text-brand-500" />
+                                    Composition
                                 </h4>
-                                <button
-                                    className="btn btn-sm btn-primary"
+                                <Button
+                                    size="sm"
                                     onClick={() => setShowAddIngredientModal(true)}
+                                    startIcon={<PlusIcon className="h-3.5 w-3.5" />}
                                 >
-                                    <Plus size={14} />
                                     Add Ingredient
-                                </button>
+                                </Button>
                             </div>
-                            <table className="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Ingredient</th>
-                                        <th>Quantity</th>
-                                        <th>Unit</th>
-                                        <th>Cost/Unit</th>
-                                        <th>Total</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(!selectedPrep.ingredients || selectedPrep.ingredients.length === 0) ? (
-                                        <tr>
-                                            <td colSpan="6" className="text-center text-muted p-4">
-                                                No ingredients added yet
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        selectedPrep.ingredients.map(item => (
-                                            <tr key={item.id}>
-                                                <td className="font-medium">{item.ingredient?.name}</td>
-                                                <td>{formatNumber(item.quantity)}</td>
-                                                <td>{item.ingredient?.unit}</td>
-                                                <td className="text-muted">{formatCurrency(item.ingredient?.cost_per_unit)}</td>
-                                                <td className="font-semibold text-primary">{formatCurrency(item.cost_for_preparation)}</td>
-                                                <td>
-                                                    <button
-                                                        className="btn btn-sm btn-danger"
-                                                        onClick={() => handleRemoveIngredient(item.id)}
-                                                    >
-                                                        <Trash2 size={12} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                                {selectedPrep.ingredients && selectedPrep.ingredients.length > 0 && (
-                                    <tfoot>
-                                        <tr>
-                                            <td colSpan="4" className="text-right font-semibold">Total:</td>
-                                            <td className="font-bold text-success">{formatCurrency(selectedPrep.total_cost)}</td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                )}
-                            </table>
 
-                            {/* Used In Recipes */}
-                            {selectedPrep.recipe_usages && selectedPrep.recipe_usages.length > 0 && (
-                                <div className="mt-6">
-                                    <h4 className="font-semibold mb-3">Used In Recipes</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedPrep.recipe_usages.map(usage => (
-                                            <span key={usage.id} className="badge badge-primary">
-                                                {usage.recipe?.name}
-                                            </span>
-                                        ))}
-                                    </div>
+                            <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableCell isHeader px="px-4">Ingredient</TableCell>
+                                            <TableCell isHeader px="px-4">Qty</TableCell>
+                                            <TableCell isHeader px="px-4">Cost/Unit</TableCell>
+                                            <TableCell isHeader px="px-4">Total</TableCell>
+                                            <TableCell isHeader px="px-4"></TableCell>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {(!selectedPrep.ingredients || selectedPrep.ingredients.length === 0) ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="py-10 text-center text-gray-500">
+                                                    No ingredients added yet
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            selectedPrep.ingredients.map(item => (
+                                                <TableRow key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                                                    <TableCell className="font-medium text-gray-800 dark:text-white/90 px-4 py-3">
+                                                        {item.ingredient?.name}
+                                                    </TableCell>
+                                                    <TableCell className="text-gray-500 dark:text-gray-400 px-4 py-3">
+                                                        {formatNumber(item.quantity)} <span className="text-[10px] uppercase">{item.ingredient?.unit}</span>
+                                                    </TableCell>
+                                                    <TableCell className="text-gray-500 dark:text-gray-400 px-4 py-3">
+                                                        {formatCurrency(item.ingredient?.cost_per_unit)}
+                                                    </TableCell>
+                                                    <TableCell className="font-semibold text-brand-500 px-4 py-3">
+                                                        {formatCurrency(item.cost_for_preparation)}
+                                                    </TableCell>
+                                                    <TableCell className="px-4 py-3 text-right">
+                                                        <button
+                                                            onClick={() => handleRemoveIngredient(item.id)}
+                                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                                        >
+                                                            <TrashBinIcon className="h-4 w-4" />
+                                                        </button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                    {selectedPrep.ingredients && selectedPrep.ingredients.length > 0 && (
+                                        <tfoot className="bg-gray-50/50 dark:bg-white/[0.01]">
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-right font-bold text-gray-800 dark:text-white/90 px-4 py-3">Total:</TableCell>
+                                                <TableCell className="font-bold text-brand-500 px-4 py-3">{formatCurrency(selectedPrep.total_cost)}</TableCell>
+                                                <TableCell className="px-4 py-3"></TableCell>
+                                            </TableRow>
+                                        </tfoot>
+                                    )}
+                                </Table>
+                            </div>
+                        </div>
+
+                        {/* Used In Recipes */}
+                        {selectedPrep.recipe_usages && selectedPrep.recipe_usages.length > 0 && (
+                            <div className="mt-8 space-y-3">
+                                <h4 className="font-bold text-gray-800 dark:text-white/90">Used In</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedPrep.recipe_usages.map(usage => (
+                                        <Link
+                                            key={usage.id}
+                                            to="/recipes"
+                                            className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-brand-50 hover:text-brand-500 dark:bg-white/[0.03] dark:text-gray-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-400"
+                                        >
+                                            {usage.recipe?.name}
+                                        </Link>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+                        )}
+
+                        <div className="mt-8 flex">
+                            <Button variant="outline" className="w-full" onClick={() => setShowDetailModal(false)}>
+                                Close
+                            </Button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </Modal>
 
             {/* Add Ingredient Modal */}
-            {showAddIngredientModal && selectedPrep && (
-                <div className="modal-overlay" onClick={() => setShowAddIngredientModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Add Ingredient</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={() => setShowAddIngredientModal(false)}>
-                                <X size={20} />
-                            </button>
+            <Modal
+                isOpen={showAddIngredientModal}
+                onClose={() => setShowAddIngredientModal(false)}
+                title="Add Ingredient"
+            >
+                <form onSubmit={handleAddIngredient} className="p-6">
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="ingredient_id">Ingredient *</Label>
+                            <Select
+                                id="ingredient_id"
+                                value={ingredientData.ingredient_id}
+                                onChange={(val) => setIngredientData({ ...ingredientData, ingredient_id: val })}
+                                placeholder="Select ingredient"
+                                options={ingredients.map(ing => ({
+                                    value: ing.id,
+                                    label: `${ing.name} (${formatCurrency(ing.cost_per_unit)}/${ing.unit})`
+                                }))}
+                            />
                         </div>
-                        <form onSubmit={handleAddIngredient}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Ingredient *</label>
-                                    <select
-                                        className="form-select"
-                                        value={ingredientData.ingredient_id}
-                                        onChange={(e) => setIngredientData({ ...ingredientData, ingredient_id: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Select ingredient</option>
-                                        {ingredients.map(ing => (
-                                            <option key={ing.id} value={ing.id}>
-                                                {ing.name} ({formatCurrency(ing.cost_per_unit)}/{ing.unit})
-                                            </option>
-                                        ))}
-                                    </select>
+                        <div>
+                            <Label htmlFor="quantity">Quantity *</Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                placeholder="Amount needed"
+                                step="0.0001"
+                                min="0.0001"
+                                value={ingredientData.quantity}
+                                onChange={(e) => setIngredientData({ ...ingredientData, quantity: e.target.value })}
+                                required
+                            />
+                        </div>
+                        {ingredientData.ingredient_id && ingredientData.quantity && (
+                            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-white/[0.03] dark:bg-white/[0.01]">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-500">Estimated Cost:</span>
+                                    <span className="font-bold text-brand-500">
+                                        {formatCurrency(
+                                            parseFloat(ingredientData.quantity) *
+                                            parseFloat(ingredients.find(i => i.id == ingredientData.ingredient_id)?.cost_per_unit || 0)
+                                        )}
+                                    </span>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Quantity *</label>
-                                    <input
-                                        type="number"
-                                        className="form-input"
-                                        placeholder="Amount needed"
-                                        step="0.0001"
-                                        min="0.0001"
-                                        value={ingredientData.quantity}
-                                        onChange={(e) => setIngredientData({ ...ingredientData, quantity: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                {ingredientData.ingredient_id && ingredientData.quantity && (
-                                    <div className="p-3 rounded-lg bg-tertiary">
-                                        <div className="flex justify-between">
-                                            <span>Estimated Cost:</span>
-                                            <span className="font-bold">
-                                                {formatCurrency(
-                                                    parseFloat(ingredientData.quantity) *
-                                                    parseFloat(ingredients.find(i => i.id == ingredientData.ingredient_id)?.cost_per_unit || 0)
-                                                )}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowAddIngredientModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-primary">
-                                    Add Ingredient
-                                </button>
-                            </div>
-                        </form>
+                        )}
                     </div>
-                </div>
-            )}
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowAddIngredientModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1">
+                            Add Ingredient
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }

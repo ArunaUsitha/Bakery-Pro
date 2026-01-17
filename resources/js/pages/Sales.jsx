@@ -11,7 +11,8 @@ import {
     CheckCircle,
     Wallet,
     AlertTriangle,
-    Trash2
+    Trash2,
+    Loader2
 } from 'lucide-react';
 import {
     getLocations,
@@ -24,6 +25,24 @@ import {
 } from '../utils/api';
 import { formatCurrency, formatNumber, getStatusBadge, getCurrentShiftStatus } from '../utils/formatters';
 import { useToast } from '../context/ToastContext';
+import {
+    PlusIcon,
+    BoxIconLine,
+    ClockIcon,
+} from "../theme/tailadmin/icons";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableRow,
+} from "../theme/tailadmin/components/ui/table";
+import Badge from "../theme/tailadmin/components/ui/badge/Badge";
+import Button from "../theme/tailadmin/components/ui/button/Button";
+import Modal from "../theme/tailadmin/components/ui/modal/Modal";
+import Label from "../theme/tailadmin/components/form/Label";
+import Input from "../theme/tailadmin/components/form/input/InputField";
+import Select from "../theme/tailadmin/components/form/Select";
 
 function Sales() {
     const [locations, setLocations] = useState([]);
@@ -136,388 +155,383 @@ function Sales() {
         inv.quantity > 0 && !sale?.items?.some(item => item.product_id === inv.product_id)
     );
 
+    if (loading && !selectedLocation) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="animate-spin text-brand-500" size={40} />
+            </div>
+        );
+    }
+
     return (
-        <div className="sales-page">
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h2>Sales</h2>
-                    <div className="page-breadcrumb">
-                        <Link to="/">Home</Link>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white/90">Sales Management</h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Link to="/" className="hover:text-brand-500">Home</Link>
                         <ChevronRight size={14} />
                         <span>Sales</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="time-indicator">
-                        <span className={`dot ${shiftStatus.color}`}></span>
-                        <span>{shiftStatus.label}</span>
-                    </div>
+                    <Badge variant="light" color={shiftStatus.color === 'green' ? 'green' : 'orange'}>
+                        <div className="flex items-center gap-1.5">
+                            <ClockIcon className="h-4 w-4" />
+                            {shiftStatus.label}
+                        </div>
+                    </Badge>
                 </div>
             </div>
 
             {/* Location Tabs */}
-            <div className="card mb-6">
-                <div className="tabs">
-                    {locations.map(location => (
-                        <button
-                            key={location.id}
-                            className={`tab ${selectedLocation === location.id ? 'active' : ''}`}
-                            onClick={() => setSelectedLocation(location.id)}
-                        >
-                            {location.type === 'shop' ? <Store size={16} /> : <Truck size={16} />}
-                            <span className="ml-2">{location.name}</span>
-                        </button>
-                    ))}
-                </div>
+            <div className="flex flex-wrap gap-2 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-2 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                {locations.map(location => (
+                    <button
+                        key={location.id}
+                        onClick={() => setSelectedLocation(location.id)}
+                        className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all ${selectedLocation === location.id ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5'}`}
+                    >
+                        {location.type === 'shop' ? <Store size={16} /> : <Truck size={16} />}
+                        {location.name}
+                    </button>
+                ))}
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center p-12">
-                    <div className="spinner"></div>
+                <div className="flex items-center justify-center min-h-[400px]">
+                    <Loader2 className="animate-spin text-brand-500" size={40} />
                 </div>
             ) : (
                 <>
-                    {/* Stats */}
-                    <div className="stats-grid mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                        <div className="stat-card primary">
-                            <div className="stat-icon primary">
-                                <ShoppingCart size={24} />
-                            </div>
-                            <div className="stat-content">
-                                <div className="stat-label">Items Sold</div>
-                                <div className="stat-value">{sale?.items?.length || 0}</div>
-                            </div>
-                        </div>
-                        <div className="stat-card success">
-                            <div className="stat-icon success">
-                                <DollarSign size={24} />
-                            </div>
-                            <div className="stat-content">
-                                <div className="stat-label">Total Sales</div>
-                                <div className="stat-value">{formatCurrency(sale?.total_amount || 0)}</div>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-500">
+                                    <ShoppingCart size={24} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Items Sold</p>
+                                    <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{sale?.items?.length || 0}</h4>
+                                </div>
                             </div>
                         </div>
-                        <div className="stat-card info">
-                            <div className="stat-icon info">
-                                <Wallet size={24} />
-                            </div>
-                            <div className="stat-content">
-                                <div className="stat-label">Expected Cash</div>
-                                <div className="stat-value">{formatCurrency(sale?.expected_amount || 0)}</div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 dark:bg-green-500/10 text-green-500">
+                                    <DollarSign size={24} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Sales</p>
+                                    <h4 className="text-xl font-bold text-gray-800 dark:text-white/90 truncate">{formatCurrency(sale?.total_amount || 0)}</h4>
+                                </div>
                             </div>
                         </div>
-                        <div className={`stat-card ${sale?.discrepancy && sale?.discrepancy < 0 ? 'danger' : 'warning'}`}>
-                            <div className={`stat-icon ${sale?.discrepancy && sale?.discrepancy < 0 ? 'danger' : 'warning'}`}>
-                                <AlertTriangle size={24} />
+
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-500">
+                                    <Wallet size={24} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Expected Cash</p>
+                                    <h4 className="text-xl font-bold text-gray-800 dark:text-white/90 truncate">{formatCurrency(sale?.expected_amount || 0)}</h4>
+                                </div>
                             </div>
-                            <div className="stat-content">
-                                <div className="stat-label">Discrepancy</div>
-                                <div className="stat-value">
-                                    {sale?.discrepancy !== null ? formatCurrency(sale.discrepancy) : '-'}
+                        </div>
+
+                        <div className={`rounded-2xl border border-gray-100 bg-white p-5 dark:border-white/[0.03] dark:bg-white/[0.03] ${sale?.discrepancy && sale?.discrepancy < 0 ? 'bg-red-50/50 dark:bg-red-500/5' : ''}`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${sale?.discrepancy && sale?.discrepancy < 0 ? 'bg-red-100 text-red-500 dark:bg-red-500/20' : 'bg-orange-50 text-orange-500 dark:bg-orange-500/10'}`}>
+                                    <AlertTriangle size={24} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Discrepancy</p>
+                                    <h4 className={`text-xl font-bold truncate ${sale?.discrepancy && sale?.discrepancy < 0 ? 'text-red-500' : 'text-gray-800 dark:text-white/90'}`}>
+                                        {sale?.discrepancy !== null ? formatCurrency(sale.discrepancy) : '-'}
+                                    </h4>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Shop Info Banner */}
-                    {isShop && (
-                        <div className="card mb-6" style={{
-                            background: 'linear-gradient(135deg, #dbeafe, #e0e7ff)',
-                            border: '1px solid #6366f1'
-                        }}>
-                            <div className="card-body flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <Store size={24} className="text-primary" />
+                    {/* Shop Collection Banner */}
+                    {isShop && sale?.status === 'open' && (
+                        <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-5 dark:border-brand-500/20 dark:bg-brand-500/5">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex gap-4">
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">
+                                        <Wallet size={24} />
+                                    </div>
                                     <div>
-                                        <div className="font-semibold text-primary-700">Shop Cash Collection</div>
-                                        <div className="text-sm text-primary-600">
-                                            Cash collection is done at 8PM each day. Record actual collected amount.
-                                        </div>
+                                        <h3 className="text-base font-semibold text-gray-800 dark:text-white/90">Shop Cash Collection</h3>
+                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                            Daily cash collection is recorded at 8PM. Ensure all sales are logged before collecting.
+                                        </p>
                                     </div>
                                 </div>
-                                {sale?.status === 'open' && sale?.items?.length > 0 && (
-                                    <button className="btn btn-primary" onClick={() => setShowCollectModal(true)}>
-                                        <Wallet size={16} />
+                                {sale?.items?.length > 0 && (
+                                    <Button onClick={() => setShowCollectModal(true)} startIcon={<Wallet size={16} />}>
                                         Collect Cash (8PM)
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {/* Sales Content */}
-                    <div className="grid-2">
-                        {/* Sale Items */}
-                        <div className="card" style={{ gridColumn: 'span 2' }}>
-                            <div className="card-header">
-                                <h4 className="card-title">
-                                    <ShoppingCart size={20} className="text-primary" />
-                                    Today's Sales - {currentLocation?.name}
-                                </h4>
-                                <div className="flex items-center gap-3">
-                                    {sale && (
-                                        <span className={`badge ${getStatusBadge(sale.status).className}`}>
-                                            {getStatusBadge(sale.status).label}
-                                        </span>
-                                    )}
-                                    {sale?.status === 'open' && (
-                                        <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
-                                            <Plus size={16} />
-                                            Add Sale
-                                        </button>
-                                    )}
-                                    {sale?.status === 'verified' && (
-                                        <button className="btn btn-success btn-sm" onClick={handleCloseSale}>
-                                            <CheckCircle size={16} />
-                                            Close Sale
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="table-container">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Product</th>
-                                            <th>Quantity</th>
-                                            <th>Unit Price</th>
-                                            <th>Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {!sale?.items?.length ? (
-                                            <tr>
-                                                <td colSpan="4">
-                                                    <div className="empty-state">
-                                                        <div className="empty-state-icon">
-                                                            <ShoppingCart size={40} />
-                                                        </div>
-                                                        <h3>No sales yet today</h3>
-                                                        <p>Record sales as customers purchase items</p>
-                                                        {sale?.status === 'open' && (
-                                                            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                                                                <Plus size={18} />
-                                                                Record First Sale
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            sale.items.map((item) => (
-                                                <tr key={item.id}>
-                                                    <td>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="avatar sm">{item.product.name.charAt(0)}</div>
-                                                            <span className="font-medium">{item.product.name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="font-semibold">{formatNumber(item.quantity)}</td>
-                                                    <td>{formatCurrency(item.unit_price)}</td>
-                                                    <td className="font-semibold text-success">{formatCurrency(item.total_price)}</td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                    {sale?.items?.length > 0 && (
-                                        <tfoot>
-                                            <tr style={{ background: 'var(--bg-tertiary)' }}>
-                                                <td colSpan="3" className="text-right font-semibold">Grand Total:</td>
-                                                <td className="font-bold text-lg text-success">
-                                                    {formatCurrency(sale.total_amount)}
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    )}
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Cash Collection Summary */}
-                    {sale?.actual_amount !== null && (
-                        <div className="card mt-6">
-                            <div className="card-header">
-                                <h4 className="card-title">
-                                    <Wallet size={20} className="text-primary" />
-                                    Cash Collection Summary
-                                </h4>
-                            </div>
-                            <div className="card-body">
-                                <div className="grid-3">
-                                    <div className="p-4 rounded-xl bg-tertiary text-center">
-                                        <div className="text-sm text-muted mb-1">Expected Amount</div>
-                                        <div className="text-2xl font-bold">{formatCurrency(sale.expected_amount)}</div>
-                                    </div>
-                                    <div className="p-4 rounded-xl bg-tertiary text-center">
-                                        <div className="text-sm text-muted mb-1">Actual Collected</div>
-                                        <div className="text-2xl font-bold">{formatCurrency(sale.actual_amount)}</div>
-                                    </div>
-                                    <div className={`p-4 rounded-xl text-center ${sale.discrepancy >= 0 ? 'bg-success-50' : 'bg-danger-50'}`} style={{
-                                        background: sale.discrepancy >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
-                                    }}>
-                                        <div className="text-sm text-muted mb-1">Discrepancy</div>
-                                        <div className={`text-2xl font-bold ${sale.discrepancy >= 0 ? 'text-success' : 'text-danger'}`}>
-                                            {sale.discrepancy >= 0 ? '+' : ''}{formatCurrency(sale.discrepancy)}
-                                        </div>
-                                    </div>
-                                </div>
-                                {sale.notes && (
-                                    <div className="mt-4 p-3 rounded-lg bg-tertiary">
-                                        <span className="text-sm text-muted">Notes: </span>
-                                        <span>{sale.notes}</span>
-                                    </div>
+                    {/* Sales Table */}
+                    <div className="rounded-2xl border border-gray-100 bg-white p-6 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                        <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+                            <h4 className="flex items-center gap-2 text-lg font-bold text-gray-800 dark:text-white/90">
+                                <ShoppingCart size={20} className="text-brand-500" />
+                                Today's Sales - {currentLocation?.name}
+                            </h4>
+                            <div className="flex items-center gap-3">
+                                {sale && (
+                                    <Badge
+                                        variant="light"
+                                        color={getStatusBadge(sale.status).className.includes('success') ? 'green' : 'orange'}
+                                    >
+                                        {getStatusBadge(sale.status).label}
+                                    </Badge>
+                                )}
+                                {sale?.status === 'open' && (
+                                    <Button size="sm" onClick={() => setShowAddModal(true)} startIcon={<PlusIcon />}>
+                                        Add Sale
+                                    </Button>
+                                )}
+                                {sale?.status === 'verified' && (
+                                    <Button size="sm" variant="outline" className="border-green-500 text-green-600 hover:bg-green-50" onClick={handleCloseSale} startIcon={<CheckCircle size={16} />}>
+                                        Close Sale
+                                    </Button>
                                 )}
                             </div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableCell isHeader px="px-4">Product</TableCell>
+                                        <TableCell isHeader px="px-4 text-center">Quantity</TableCell>
+                                        <TableCell isHeader px="px-4 text-right">Unit Price</TableCell>
+                                        <TableCell isHeader px="px-4 text-right">Total Price</TableCell>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {!sale?.items?.length ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="py-20 text-center">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <ShoppingCart className="mb-4 text-gray-300" size={48} />
+                                                    <h5 className="text-base font-semibold text-gray-800 dark:text-white/90">No sales yet today</h5>
+                                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Record sales as customers purchase items</p>
+                                                    {sale?.status === 'open' && (
+                                                        <Button size="sm" onClick={() => setShowAddModal(true)} className="mt-6" startIcon={<PlusIcon />}>
+                                                            Record First Sale
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        sale.items.map((item) => (
+                                            <TableRow key={item.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                                                <TableCell className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-500 dark:bg-white/5 font-bold">
+                                                            {item.product.name.charAt(0)}
+                                                        </div>
+                                                        <span className="font-semibold text-gray-800 dark:text-white/90">{item.product.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-center font-bold text-gray-800 dark:text-white/90">
+                                                    {formatNumber(item.quantity)}
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+                                                    {formatCurrency(item.unit_price)}
+                                                </TableCell>
+                                                <TableCell className="px-4 py-3 text-right font-black text-green-600">
+                                                    {formatCurrency(item.total_price)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {sale?.items?.length > 0 && (
+                            <div className="mt-6 flex justify-end border-t border-gray-100 pt-6 dark:border-white/[0.03]">
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sales Amount:</span>
+                                    <span className="text-3xl font-black text-green-600 dark:text-green-400">{formatCurrency(sale.total_amount)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Collection Summary */}
+                    {sale?.actual_amount !== null && (
+                        <div className="rounded-2xl border border-gray-100 bg-white p-6 dark:border-white/[0.03] dark:bg-white/[0.03]">
+                            <h4 className="flex items-center gap-2 text-lg font-bold text-gray-800 dark:text-white/90 mb-6">
+                                <Wallet size={20} className="text-brand-500" />
+                                Cash Collection Summary
+                            </h4>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div className="rounded-2xl bg-gray-50 p-5 dark:bg-white/5">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Expected</p>
+                                    <p className="mt-2 text-2xl font-black text-gray-800 dark:text-white/90">{formatCurrency(sale.expected_amount)}</p>
+                                </div>
+                                <div className="rounded-2xl bg-gray-50 p-5 dark:bg-white/5">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Collected</p>
+                                    <p className="mt-2 text-2xl font-black text-gray-800 dark:text-white/90">{formatCurrency(sale.actual_amount)}</p>
+                                </div>
+                                <div className={`rounded-2xl p-5 ${sale.discrepancy >= 0 ? 'bg-green-50 dark:bg-green-500/10' : 'bg-red-50 dark:bg-red-500/10'}`}>
+                                    <p className={`text-xs font-semibold uppercase tracking-wider ${sale.discrepancy >= 0 ? 'text-green-600' : 'text-red-600'}`}>Discrepancy</p>
+                                    <p className={`mt-2 text-2xl font-black ${sale.discrepancy >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {sale.discrepancy >= 0 ? '+' : ''}{formatCurrency(sale.discrepancy)}
+                                    </p>
+                                </div>
+                            </div>
+                            {sale.notes && (
+                                <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-4 dark:border-white/10">
+                                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Collection Notes:</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 italic">"{sale.notes}"</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </>
             )}
 
             {/* Add Sale Modal */}
-            {showAddModal && (
-                <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Record Sale</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={() => setShowAddModal(false)}>
-                                <X size={20} />
-                            </button>
+            <Modal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                title="Record Sale"
+            >
+                <form onSubmit={handleAddItem} className="p-6">
+                    <div className="space-y-6">
+                        <div>
+                            <Label htmlFor="product">Product *</Label>
+                            <Select
+                                id="product"
+                                value={selectedProduct}
+                                onChange={(val) => setSelectedProduct(val)}
+                                placeholder="Select a product"
+                                options={availableProducts.map(inv => ({
+                                    value: inv.product_id,
+                                    label: `${inv.product.name} (${inv.quantity} available)`
+                                }))}
+                            />
                         </div>
-                        <form onSubmit={handleAddItem}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Product *</label>
-                                    <select
-                                        className="form-select"
-                                        value={selectedProduct}
-                                        onChange={(e) => setSelectedProduct(e.target.value)}
-                                        required
-                                    >
-                                        <option value="">Select a product</option>
-                                        {availableProducts.map(inv => (
-                                            <option key={inv.product_id} value={inv.product_id}>
-                                                {inv.product.name} ({inv.quantity} available)
-                                            </option>
-                                        ))}
-                                    </select>
+                        <div>
+                            <Label htmlFor="quantity">Quantity Sold *</Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                placeholder="Enter quantity"
+                                min="1"
+                                max={availableProducts.find(p => p.product_id == selectedProduct)?.quantity || 999}
+                                value={quantity}
+                                onChange={(e) => setQuantity(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        {selectedProduct && (
+                            <div className="rounded-2xl bg-green-50 p-5 dark:bg-green-500/10">
+                                <div className="flex items-center justify-between py-1 border-b border-green-100 dark:border-green-500/20 mb-3">
+                                    <span className="text-sm font-medium text-green-700 dark:text-green-300">Price per unit:</span>
+                                    <span className="font-bold text-green-800 dark:text-green-200">
+                                        {formatCurrency(products.find(p => p.id == selectedProduct)?.selling_price || 0)}
+                                    </span>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Quantity *</label>
-                                    <input
-                                        type="number"
-                                        className="form-input"
-                                        placeholder="Enter quantity"
-                                        min="1"
-                                        max={availableProducts.find(p => p.product_id == selectedProduct)?.quantity || 999}
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                {selectedProduct && (
-                                    <div className="p-3 rounded-lg bg-tertiary mt-4">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted">Price per unit:</span>
-                                            <span className="font-semibold">
-                                                {formatCurrency(products.find(p => p.id == selectedProduct)?.selling_price || 0)}
-                                            </span>
-                                        </div>
-                                        {quantity && (
-                                            <div className="flex justify-between text-sm mt-2">
-                                                <span className="text-muted">Total:</span>
-                                                <span className="font-bold text-success">
-                                                    {formatCurrency((products.find(p => p.id == selectedProduct)?.selling_price || 0) * parseInt(quantity))}
-                                                </span>
-                                            </div>
-                                        )}
+                                {quantity && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-bold text-green-700 dark:text-green-300">Total Sale Value:</span>
+                                        <span className="text-2xl font-black text-green-600 dark:text-green-400">
+                                            {formatCurrency((products.find(p => p.id == selectedProduct)?.selling_price || 0) * parseInt(quantity))}
+                                        </span>
                                     </div>
                                 )}
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-primary">
-                                    <Plus size={16} />
-                                    Add Sale
-                                </button>
-                            </div>
-                        </form>
+                        )}
                     </div>
-                </div>
-            )}
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowAddModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1" startIcon={<PlusIcon />}>
+                            Record Sale
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
 
             {/* Collect Cash Modal */}
-            {showCollectModal && (
-                <div className="modal-overlay" onClick={() => setShowCollectModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Cash Collection (8PM)</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={() => setShowCollectModal(false)}>
-                                <X size={20} />
-                            </button>
+            <Modal
+                isOpen={showCollectModal}
+                onClose={() => setShowCollectModal(false)}
+                title="Cash Collection (8PM)"
+            >
+                <form onSubmit={handleCashCollection} className="p-6">
+                    <div className="space-y-6">
+                        <div className="rounded-2xl bg-blue-50/50 p-5 text-center dark:bg-blue-500/5">
+                            <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Expected Amount Based on Sales:</p>
+                            <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{formatCurrency(sale?.expected_amount || 0)}</p>
                         </div>
-                        <form onSubmit={handleCashCollection}>
-                            <div className="modal-body">
-                                <div className="p-4 rounded-xl bg-tertiary mb-4">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted">Expected Amount:</span>
-                                        <span className="text-xl font-bold">{formatCurrency(sale?.expected_amount || 0)}</span>
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Actual Amount Collected (LKR) *</label>
-                                    <input
-                                        type="number"
-                                        className="form-input"
-                                        placeholder="Enter actual amount"
-                                        step="0.01"
-                                        min="0"
-                                        value={actualAmount}
-                                        onChange={(e) => setActualAmount(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Notes</label>
-                                    <textarea
-                                        className="form-textarea"
-                                        placeholder="Any notes about discrepancy..."
-                                        value={collectNotes}
-                                        onChange={(e) => setCollectNotes(e.target.value)}
-                                        rows="3"
-                                    />
-                                </div>
-                                {actualAmount && (
-                                    <div className={`p-3 rounded-lg ${parseFloat(actualAmount) >= (sale?.expected_amount || 0) ? 'bg-success-50' : 'bg-danger-50'}`}
-                                        style={{
-                                            background: parseFloat(actualAmount) >= (sale?.expected_amount || 0) ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
-                                        }}
-                                    >
-                                        <div className="flex justify-between">
-                                            <span>Discrepancy:</span>
-                                            <span className={`font-bold ${parseFloat(actualAmount) >= (sale?.expected_amount || 0) ? 'text-success' : 'text-danger'}`}>
-                                                {formatCurrency(parseFloat(actualAmount) - (sale?.expected_amount || 0))}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
+
+                        <div>
+                            <Label htmlFor="actual_amount">Actual Amount Collected (LKR) *</Label>
+                            <Input
+                                id="actual_amount"
+                                type="number"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                                value={actualAmount}
+                                onChange={(e) => setActualAmount(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="notes">Collection Notes</Label>
+                            <textarea
+                                id="notes"
+                                className="w-full rounded-lg border border-gray-200 bg-white p-3 text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03] dark:focus:border-brand-500"
+                                placeholder="Any notes about the collection or discrepancies..."
+                                value={collectNotes}
+                                onChange={(e) => setCollectNotes(e.target.value)}
+                                rows="3"
+                            />
+                        </div>
+
+                        {actualAmount && (
+                            <div className={`rounded-xl p-4 flex justify-between items-center ${parseFloat(actualAmount) >= (sale?.expected_amount || 0) ? 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+                                <span className="text-sm font-bold">Projected Discrepancy:</span>
+                                <span className="text-lg font-black italic">
+                                    {parseFloat(actualAmount) >= (sale?.expected_amount || 0) ? '+' : ''}
+                                    {formatCurrency(parseFloat(actualAmount) - (sale?.expected_amount || 0))}
+                                </span>
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowCollectModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-primary">
-                                    <CheckCircle size={16} />
-                                    Record Collection
-                                </button>
-                            </div>
-                        </form>
+                        )}
                     </div>
-                </div>
-            )}
+                    <div className="mt-8 flex gap-3">
+                        <Button variant="outline" className="flex-1" onClick={() => setShowCollectModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="flex-1" startIcon={<CheckCircle size={16} />}>
+                            Finalize Collection
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }

@@ -1,36 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
-    Plus,
-    Pencil,
-    Trash2,
-    Search,
-    Package,
-    ChevronRight,
-    X,
-    Filter,
-    Clock,
-    DollarSign
-} from 'lucide-react';
-import { getProducts, createProduct, updateProduct, deleteProduct } from '../utils/api';
-import { formatCurrency, getCategoryBadge } from '../utils/formatters';
-import { useToast } from '../context/ToastContext';
+    PlusIcon,
+    BoxIconLine,
+    TrashBinIcon,
+    PencilIcon,
+    HorizontaLDots,
+} from "../theme/tailadmin/icons";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHeader,
+    TableRow,
+} from "../theme/tailadmin/components/ui/table";
+import Badge from "../theme/tailadmin/components/ui/badge/Badge";
+import Button from "../theme/tailadmin/components/ui/button/Button";
+import Modal from "../theme/tailadmin/components/ui/modal/Modal";
+import Label from "../theme/tailadmin/components/form/Label";
+import Input from "../theme/tailadmin/components/form/input/InputField";
+import Select from "../theme/tailadmin/components/form/Select";
+import { getProducts, createProduct, updateProduct, deleteProduct } from "../utils/api";
+import { formatCurrency, getCategoryBadge } from "../utils/formatters";
+import { useToast } from "../context/ToastContext";
+import { Package, Clock, ChevronRight, Search } from "lucide-react";
 
-function Products() {
+export default function Products() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [searchTerm, setSearchTerm] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("all");
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [formData, setFormData] = useState({
-        name: '',
-        category: 'day_food',
-        production_cost: '',
-        shop_price: '',
-        selling_price: '',
+        name: "",
+        category: "day_food",
+        production_cost: "",
+        shop_price: "",
+        selling_price: "",
         shelf_life_days: 1,
-        description: ''
+        description: "",
     });
     const toast = useToast();
 
@@ -39,11 +48,12 @@ function Products() {
     }, []);
 
     const fetchProducts = async () => {
+        setLoading(true);
         try {
             const response = await getProducts();
             setProducts(response.data);
         } catch (error) {
-            toast.error('Failed to fetch products');
+            toast.error("Failed to fetch products");
         } finally {
             setLoading(false);
         }
@@ -54,26 +64,26 @@ function Products() {
         try {
             if (editingProduct) {
                 await updateProduct(editingProduct.id, formData);
-                toast.success('Product updated successfully');
+                toast.success("Product updated successfully");
             } else {
                 await createProduct(formData);
-                toast.success('Product created successfully');
+                toast.success("Product created successfully");
             }
             fetchProducts();
             closeModal();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to save product');
+            toast.error(error.response?.data?.message || "Failed to save product");
         }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this product?')) return;
+        if (!confirm("Are you sure you want to delete this product?")) return;
         try {
             await deleteProduct(id);
-            toast.success('Product deleted successfully');
+            toast.success("Product deleted successfully");
             fetchProducts();
         } catch (error) {
-            toast.error('Failed to delete product');
+            toast.error("Failed to delete product");
         }
     };
 
@@ -87,18 +97,18 @@ function Products() {
                 shop_price: product.shop_price,
                 selling_price: product.selling_price,
                 shelf_life_days: product.shelf_life_days,
-                description: product.description || ''
+                description: product.description || "",
             });
         } else {
             setEditingProduct(null);
             setFormData({
-                name: '',
-                category: 'day_food',
-                production_cost: '',
-                shop_price: '',
-                selling_price: '',
+                name: "",
+                category: "day_food",
+                production_cost: "",
+                shop_price: "",
+                selling_price: "",
                 shelf_life_days: 1,
-                description: ''
+                description: "",
             });
         }
         setShowModal(true);
@@ -109,319 +119,316 @@ function Products() {
         setEditingProduct(null);
     };
 
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    const filteredProducts = products.filter((product) => {
+        const matchesSearch = product.name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        const matchesCategory =
+            categoryFilter === "all" || product.category === categoryFilter;
         return matchesSearch && matchesCategory;
     });
 
-    const dayFoods = products.filter(p => p.category === 'day_food');
-    const packedFoods = products.filter(p => p.category === 'packed_food');
+    const dayFoods = products.filter((p) => p.category === "day_food");
+    const packedFoods = products.filter((p) => p.category === "packed_food");
 
     return (
-        <div className="products-page">
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h2>Products</h2>
-                    <div className="page-breadcrumb">
-                        <Link to="/">Home</Link>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white/90">Products</h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Link to="/" className="hover:text-brand-500">Home</Link>
                         <ChevronRight size={14} />
                         <span>Products</span>
                     </div>
                 </div>
-                <button className="btn btn-primary" onClick={() => openModal()}>
-                    <Plus size={18} />
+                <Button onClick={() => openModal()} startIcon={<PlusIcon />}>
                     Add Product
-                </button>
+                </Button>
             </div>
 
-            {/* Stats Row */}
-            <div className="stats-grid mb-6" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div className="stat-card primary">
-                    <div className="stat-icon primary">
-                        <Package size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Total Products</div>
-                        <div className="stat-value">{products.length}</div>
-                    </div>
-                </div>
-                <div className="stat-card warning">
-                    <div className="stat-icon warning">
-                        <Clock size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Day Foods</div>
-                        <div className="stat-value">{dayFoods.length}</div>
-                    </div>
-                </div>
-                <div className="stat-card info">
-                    <div className="stat-icon info">
-                        <Package size={24} />
-                    </div>
-                    <div className="stat-content">
-                        <div className="stat-label">Packed Foods</div>
-                        <div className="stat-value">{packedFoods.length}</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="card mb-6">
-                <div className="card-body">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-6">
+                <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
                     <div className="flex items-center gap-4">
-                        <div className="header-search" style={{ minWidth: '300px' }}>
-                            <Search size={18} />
+                        <div className="flex items-center justify-center w-12 h-12 bg-brand-50 rounded-xl dark:bg-brand-500/10 text-brand-500">
+                            <Package size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Products</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{products.length}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center w-12 h-12 bg-warning-50 rounded-xl dark:bg-warning-500/10 text-warning-500">
+                            <Clock size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Day Foods</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{dayFoods.length}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center w-12 h-12 bg-info-50 rounded-xl dark:bg-info-500/10 text-info-500">
+                            <BoxIconLine size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Packed Foods</p>
+                            <h4 className="text-xl font-bold text-gray-800 dark:text-white/90">{packedFoods.length}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters & Table */}
+            <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 sm:p-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="relative w-full max-w-sm">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-5" />
                             <input
                                 type="text"
                                 placeholder="Search products..."
+                                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Filter size={18} className="text-muted" />
-                            <select
-                                className="form-select"
-                                style={{ width: 'auto' }}
+                        <div className="flex items-center gap-3">
+                            <Select
+                                className="w-44"
                                 value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value)}
-                            >
-                                <option value="all">All Categories</option>
-                                <option value="day_food">Day Food</option>
-                                <option value="packed_food">Packed Food</option>
-                            </select>
+                                onChange={setCategoryFilter}
+                                options={[
+                                    { label: "All Categories", value: "all" },
+                                    { label: "Day Food", value: "day_food" },
+                                    { label: "Packed Food", value: "packed_food" },
+                                ]}
+                            />
                         </div>
-                        <span className="text-muted ml-auto">
-                            Showing {filteredProducts.length} of {products.length} products
-                        </span>
                     </div>
                 </div>
-            </div>
 
-            {/* Products Table */}
-            <div className="card">
-                <div className="table-container">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Product Name</th>
-                                <th>Category</th>
-                                <th>Production Cost</th>
-                                <th>Shop Price</th>
-                                <th>Selling Price</th>
-                                <th>Shelf Life</th>
-                                <th>Status</th>
-                                <th style={{ width: '100px' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                <div className="max-w-full overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                            <TableRow>
+                                <TableCell isHeader className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Product Details
+                                </TableCell>
+                                <TableCell isHeader className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Category
+                                </TableCell>
+                                <TableCell isHeader className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Pricing
+                                </TableCell>
+                                <TableCell isHeader className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Shelf Life
+                                </TableCell>
+                                <TableCell isHeader className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Status
+                                </TableCell>
+                                <TableCell isHeader className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Actions
+                                </TableCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {loading ? (
-                                <tr>
-                                    <td colSpan="8" className="text-center p-6">
-                                        <div className="spinner mx-auto"></div>
-                                    </td>
-                                </tr>
+                                <TableRow>
+                                    <TableCell colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-500 mx-auto mb-2"></div>
+                                        Loading products...
+                                    </TableCell>
+                                </TableRow>
                             ) : filteredProducts.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8">
-                                        <div className="empty-state">
-                                            <div className="empty-state-icon">
-                                                <Package size={40} />
-                                            </div>
-                                            <h3>No products found</h3>
-                                            <p>Get started by adding your first product</p>
-                                            <button className="btn btn-primary" onClick={() => openModal()}>
-                                                <Plus size={18} />
-                                                Add Product
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <TableRow>
+                                    <TableCell colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                                        No products found matching your criteria.
+                                    </TableCell>
+                                </TableRow>
                             ) : (
                                 filteredProducts.map((product) => {
                                     const categoryBadge = getCategoryBadge(product.category);
                                     return (
-                                        <tr key={product.id}>
-                                            <td>
+                                        <TableRow key={product.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="avatar sm">
+                                                    <div className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg text-brand-500 font-bold">
                                                         {product.name.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium">{product.name}</div>
-                                                        {product.description && (
-                                                            <div className="text-sm text-muted truncate" style={{ maxWidth: '200px' }}>
-                                                                {product.description}
-                                                            </div>
-                                                        )}
+                                                        <div className="text-sm font-semibold text-gray-800 dark:text-white/90">{product.name}</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">{product.description}</div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${categoryBadge.className}`}>
-                                                    {categoryBadge.label}
-                                                </span>
-                                            </td>
-                                            <td>{formatCurrency(product.production_cost)}</td>
-                                            <td>{formatCurrency(product.shop_price)}</td>
-                                            <td className="font-semibold">{formatCurrency(product.selling_price)}</td>
-                                            <td>{product.shelf_life_days} day{product.shelf_life_days > 1 ? 's' : ''}</td>
-                                            <td>
-                                                <span className={`badge ${product.is_active ? 'badge-success' : 'badge-secondary'}`}>
-                                                    {product.is_active ? 'Active' : 'Inactive'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="action-btns">
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <Badge color={product.category === "day_food" ? "warning" : "info"} size="sm">
+                                                    {product.category.replace('_', ' ').toUpperCase()}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-800 dark:text-white/90 font-medium">Selling: {formatCurrency(product.selling_price)}</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400">Cost: {formatCurrency(product.production_cost)}</div>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm text-gray-800 dark:text-white/90">{product.shelf_life_days} Days</span>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap">
+                                                <Badge color={product.is_active ? "success" : "light"} size="sm">
+                                                    {product.is_active ? "Active" : "Inactive"}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                                <div className="flex items-center justify-end gap-2">
                                                     <button
-                                                        className="action-btn edit"
                                                         onClick={() => openModal(product)}
-                                                        title="Edit"
+                                                        className="p-2 text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-500/10 rounded-lg transition-colors"
                                                     >
-                                                        <Pencil size={16} />
+                                                        <PencilIcon className="size-5" />
                                                     </button>
                                                     <button
-                                                        className="action-btn delete"
                                                         onClick={() => handleDelete(product.id)}
-                                                        title="Delete"
+                                                        className="p-2 text-gray-500 hover:text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10 rounded-lg transition-colors"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <TrashBinIcon className="size-5" />
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     );
                                 })
                             )}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
             </div>
 
             {/* Add/Edit Modal */}
-            {showModal && (
-                <div className="modal-overlay" onClick={closeModal}>
-                    <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
-                            <button className="btn-ghost btn-icon sm" onClick={closeModal}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleSubmit}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Product Name *</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Enter product name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label className="form-label">Category *</label>
-                                        <select
-                                            className="form-select"
-                                            value={formData.category}
-                                            onChange={(e) => setFormData({
-                                                ...formData,
-                                                category: e.target.value,
-                                                shelf_life_days: e.target.value === 'day_food' ? 1 : 3
-                                            })}
-                                        >
-                                            <option value="day_food">Day Food (Fresh)</option>
-                                            <option value="packed_food">Packed Food</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Shelf Life (Days) *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            min="1"
-                                            value={formData.shelf_life_days}
-                                            onChange={(e) => setFormData({ ...formData, shelf_life_days: parseInt(e.target.value) })}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="form-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                                    <div className="form-group">
-                                        <label className="form-label">Production Cost (LKR) *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            min="0"
-                                            value={formData.production_cost}
-                                            onChange={(e) => setFormData({ ...formData, production_cost: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Shop Price (LKR) *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            min="0"
-                                            value={formData.shop_price}
-                                            onChange={(e) => setFormData({ ...formData, shop_price: e.target.value })}
-                                            required
-                                        />
-                                        <span className="text-xs text-muted mt-1 block">Discounted price for shop</span>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Selling Price (LKR) *</label>
-                                        <input
-                                            type="number"
-                                            className="form-input"
-                                            placeholder="0.00"
-                                            step="0.01"
-                                            min="0"
-                                            value={formData.selling_price}
-                                            onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                                            required
-                                        />
-                                        <span className="text-xs text-muted mt-1 block">Price to customers</span>
-                                    </div>
-                                </div>
-
-                                <div className="form-group">
-                                    <label className="form-label">Description</label>
-                                    <textarea
-                                        className="form-textarea"
-                                        placeholder="Enter product description"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        rows="3"
-                                    />
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={closeModal}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn btn-primary">
-                                    {editingProduct ? 'Update Product' : 'Create Product'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+            <Modal
+                isOpen={showModal}
+                onClose={closeModal}
+                className="max-w-2xl"
+            >
+                <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white/90">
+                        {editingProduct ? "Edit Product" : "Add New Product"}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {editingProduct ? "Update product details below." : "Enter the details for the new product."}
+                    </p>
                 </div>
-            )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <div className="md:col-span-2">
+                            <Label htmlFor="name">Product Name *</Label>
+                            <Input
+                                id="name"
+                                placeholder="Enter product name"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="category">Category *</Label>
+                            <Select
+                                id="category"
+                                value={formData.category}
+                                onChange={(val) => setFormData({
+                                    ...formData,
+                                    category: val,
+                                    shelf_life_days: val === 'day_food' ? 1 : 3
+                                })}
+                                options={[
+                                    { label: "Day Food (Fresh)", value: "day_food" },
+                                    { label: "Packed Food", value: "packed_food" },
+                                ]}
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="shelf_life">Shelf Life (Days) *</Label>
+                            <Input
+                                id="shelf_life"
+                                type="number"
+                                min="1"
+                                value={formData.shelf_life_days}
+                                onChange={(e) => setFormData({ ...formData, shelf_life_days: parseInt(e.target.value) })}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="production_cost">Production Cost (LKR) *</Label>
+                            <Input
+                                id="production_cost"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={formData.production_cost}
+                                onChange={(e) => setFormData({ ...formData, production_cost: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="shop_price">Shop Price (LKR) *</Label>
+                            <Input
+                                id="shop_price"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={formData.shop_price}
+                                onChange={(e) => setFormData({ ...formData, shop_price: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <Label htmlFor="selling_price">Selling Price (LKR) *</Label>
+                            <Input
+                                id="selling_price"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={formData.selling_price}
+                                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+                                required
+                            />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <Label htmlFor="description">Description</Label>
+                            <textarea
+                                id="description"
+                                className="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:text-white/90"
+                                rows="3"
+                                placeholder="Enter product description"
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <Button variant="outline" onClick={closeModal}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">
+                            {editingProduct ? "Update Product" : "Create Product"}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }
-
-export default Products;

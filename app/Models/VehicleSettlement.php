@@ -14,6 +14,8 @@ class VehicleSettlement extends Model
         'items_returned',
         'items_sold',
         'expected_cash',
+        'float_cash',
+        'expected_from_stock',
         'actual_cash',
         'discrepancy',
         'status',
@@ -26,6 +28,8 @@ class VehicleSettlement extends Model
         'items_returned' => 'array',
         'items_sold' => 'array',
         'expected_cash' => 'decimal:2',
+        'float_cash' => 'decimal:2',
+        'expected_from_stock' => 'decimal:2',
         'actual_cash' => 'decimal:2',
         'discrepancy' => 'decimal:2',
     ];

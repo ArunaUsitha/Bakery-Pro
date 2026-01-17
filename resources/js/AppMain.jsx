@@ -12,8 +12,11 @@ import Reports from './pages/Reports';
 import Ingredients from './pages/Ingredients';
 import Recipes from './pages/Recipes';
 import BasePreparations from './pages/BasePreparations';
+import Settings from './pages/Settings';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './theme/tailadmin/context/ThemeContext';
+import { SidebarProvider } from './theme/tailadmin/context/SidebarContext';
 import Login from './pages/Login';
 
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -22,8 +25,8 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-500"></div>
             </div>
         );
     }
@@ -43,53 +46,45 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 };
 
 function App() {
-    const [theme, setTheme] = useState(() => {
-        return localStorage.getItem('theme') || 'light';
-    });
-
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    };
-
     return (
         <AuthProvider>
-            <ToastProvider>
-                <Routes>
-                    <Route path="/login" element={<Login />} />
+            <ThemeProvider>
+                <SidebarProvider>
+                    <ToastProvider>
+                        <Routes>
+                            <Route path="/login" element={<Login />} />
 
-                    <Route element={
-                        <ProtectedRoute>
-                            <Layout theme={theme} toggleTheme={toggleTheme} />
-                        </ProtectedRoute>
-                    }>
-                        <Route index element={<Dashboard />} />
-                        <Route path="production" element={<Production />} />
-                        <Route path="inventory" element={<Inventory />} />
-                        <Route path="sales" element={<Sales />} />
-                        <Route path="settlements" element={<VehicleSettlement />} />
-                        <Route path="wastage" element={<Wastage />} />
+                            <Route element={
+                                <ProtectedRoute>
+                                    <Layout />
+                                </ProtectedRoute>
+                            }>
+                                <Route index element={<Dashboard />} />
+                                <Route path="production" element={<Production />} />
+                                <Route path="inventory" element={<Inventory />} />
+                                <Route path="sales" element={<Sales />} />
+                                <Route path="settlements" element={<VehicleSettlement />} />
+                                <Route path="wastage" element={<Wastage />} />
 
-                        {/* Role Protected Sub-routes */}
-                        <Route element={<ProtectedRoute roles={['admin', 'manager']} />}>
-                            <Route path="products" element={<Products />} />
-                            <Route path="ingredients" element={<Ingredients />} />
-                            <Route path="recipes" element={<Recipes />} />
-                            <Route path="base-preparations" element={<BasePreparations />} />
-                        </Route>
+                                {/* Role Protected Sub-routes */}
+                                <Route element={<ProtectedRoute roles={['admin', 'manager', 'supervisor']} />}>
+                                    <Route path="products" element={<Products />} />
+                                    <Route path="ingredients" element={<Ingredients />} />
+                                    <Route path="recipes" element={<Recipes />} />
+                                    <Route path="base-preparations" element={<BasePreparations />} />
+                                </Route>
 
-                        <Route element={<ProtectedRoute roles={['admin']} />}>
-                            <Route path="reports" element={<Reports />} />
-                        </Route>
-                    </Route>
+                                <Route element={<ProtectedRoute roles={['admin']} />}>
+                                    <Route path="reports" element={<Reports />} />
+                                    <Route path="settings" element={<Settings />} />
+                                </Route>
+                            </Route>
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </ToastProvider>
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                    </ToastProvider>
+                </SidebarProvider>
+            </ThemeProvider>
         </AuthProvider>
     );
 }

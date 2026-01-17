@@ -11,6 +11,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class ProductionController extends Controller
 {
@@ -46,8 +47,10 @@ class ProductionController extends Controller
         return response()->json($production);
     }
 
-    public function addItem(Request $request, ProductionBatch $production): JsonResponse
+    public function addItem(Request $request, $productionId): JsonResponse
     {
+        $production = ProductionBatch::findOrFail($productionId);
+        
         if ($production->isCompleted()) {
             return response()->json(['error' => 'Batch is already completed'], 400);
         }
@@ -57,7 +60,8 @@ class ProductionController extends Controller
             'quantity_produced' => 'required|integer|min:1',
         ]);
 
-        $item = $production->items()->create([
+        $item = ProductionItem::create([
+            'production_batch_id' => $production->id,
             'product_id' => $validated['product_id'],
             'quantity_produced' => $validated['quantity_produced'],
         ]);
@@ -66,8 +70,10 @@ class ProductionController extends Controller
         return response()->json($item, 201);
     }
 
-    public function complete(ProductionBatch $production): JsonResponse
+    public function complete($productionId): JsonResponse
     {
+        $production = ProductionBatch::findOrFail($productionId);
+        
         if ($production->isCompleted()) {
             return response()->json(['error' => 'Batch is already completed'], 400);
         }
@@ -106,8 +112,11 @@ class ProductionController extends Controller
         return response()->json($batch);
     }
 
-    public function removeItem(ProductionBatch $production, ProductionItem $item): JsonResponse
+    public function removeItem($productionId, $itemId): JsonResponse
     {
+        $production = ProductionBatch::findOrFail($productionId);
+        $item = ProductionItem::findOrFail($itemId);
+        
         if ($production->isCompleted()) {
             return response()->json(['error' => 'Cannot modify completed batch'], 400);
         }
@@ -118,5 +127,40 @@ class ProductionController extends Controller
 
         $item->delete();
         return response()->json(null, 204);
+    }
+
+    /**
+     * Update production item quantity (Admin only - requires password verification)
+     */
+    public function updateItem(Request $request, $productionId, $itemId): JsonResponse
+    {
+        $production = ProductionBatch::findOrFail($productionId);
+        $item = ProductionItem::findOrFail($itemId);
+
+        if ($item->production_batch_id !== $production->id) {
+            return response()->json(['error' => 'Item does not belong to this batch'], 400);
+        }
+
+        $validated = $request->validate([
+            'quantity_produced' => 'required|integer|min:0',
+            'admin_password' => 'required|string',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        // Verify admin password
+        $user = auth()->user();
+        if (!Hash::check($validated['admin_password'], $user->password)) {
+            return response()->json(['error' => 'Invalid admin password'], 403);
+        }
+
+        $oldQuantity = $item->quantity_produced;
+        $item->quantity_produced = $validated['quantity_produced'];
+        $item->save();
+
+        // Log the change (you could add a production_logs table for this)
+        \Log::info("Production item #{$item->id} quantity changed from {$oldQuantity} to {$validated['quantity_produced']} by user #{$user->id}. Reason: " . ($validated['reason'] ?? 'Not provided'));
+
+        $item->load('product');
+        return response()->json($item);
     }
 }

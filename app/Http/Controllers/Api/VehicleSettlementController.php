@@ -42,6 +42,17 @@ class VehicleSettlementController extends Controller
             return response()->json(['error' => 'Selected location is not a vehicle'], 400);
         }
 
+        // Check for existing pending settlement for this vehicle today
+        $existingSettlement = VehicleSettlement::where('inventory_location_id', $vehicle->id)
+            ->whereDate('settlement_date', today())
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existingSettlement) {
+            $existingSettlement->load('location');
+            return response()->json($existingSettlement, 200);
+        }
+
         // Get items currently on vehicle
         $currentInventory = Inventory::where('inventory_location_id', $vehicle->id)
             ->where('quantity', '>', 0)
@@ -50,7 +61,8 @@ class VehicleSettlementController extends Controller
             ->map(fn($inv) => [
                 'product_id' => $inv->product_id,
                 'product_name' => $inv->product->name,
-                'quantity' => $inv->quantity,
+                'quantity_sent' => $inv->quantity,
+                'quantity_returned' => $inv->quantity, // Default to same as sent
                 'selling_price' => $inv->product->selling_price,
             ]);
 
@@ -81,7 +93,19 @@ class VehicleSettlementController extends Controller
             'total_price' => $item->total_price,
         ]) : collect();
 
-        $expectedCash = $sale ? $sale->total_amount : 0;
+        // Calculate expected cash from sales
+        $expectedFromSales = $sale ? $sale->total_amount : 0;
+        
+        // Calculate expected cash from stocked items (current inventory value at selling price)
+        $expectedFromStock = $currentInventory->sum(function ($item) {
+            return ($item['quantity_sent'] ?? 0) * ($item['selling_price'] ?? 0);
+        });
+
+        // Get vehicle's float cash (starting cash)
+        $floatCash = $vehicle->float_cash ?? 0;
+
+        // Total expected = sales + float cash (stock items are returned, not sold)
+        $expectedCash = $expectedFromSales + $floatCash;
 
         $settlement = VehicleSettlement::create([
             'inventory_location_id' => $vehicle->id,
@@ -89,6 +113,8 @@ class VehicleSettlementController extends Controller
             'items_sent' => $itemsSent,
             'items_returned' => $currentInventory,
             'items_sold' => $itemsSold,
+            'float_cash' => $floatCash,
+            'expected_from_stock' => $expectedFromStock,
             'expected_cash' => $expectedCash,
             'status' => 'pending',
         ]);
@@ -97,12 +123,20 @@ class VehicleSettlementController extends Controller
         return response()->json($settlement, 201);
     }
 
-    public function recordReturn(Request $request, VehicleSettlement $settlement): JsonResponse
+    public function recordReturn(Request $request, $settlementId): JsonResponse
     {
+        $settlement = VehicleSettlement::findOrFail($settlementId);
+        
+        if ($settlement->status === 'settled') {
+            return response()->json(['error' => 'Settlement already completed'], 400);
+        }
+
         $validated = $request->validate([
             'items_returned' => 'required|array',
             'items_returned.*.product_id' => 'required|exists:products,id',
-            'items_returned.*.quantity' => 'required|integer|min:0',
+            'items_returned.*.product_name' => 'required|string',
+            'items_returned.*.quantity_sent' => 'required|integer|min:0',
+            'items_returned.*.quantity_returned' => 'required|integer|min:0',
         ]);
 
         $settlement->items_returned = $validated['items_returned'];
@@ -111,8 +145,10 @@ class VehicleSettlementController extends Controller
         return response()->json($settlement);
     }
 
-    public function settle(Request $request, VehicleSettlement $settlement): JsonResponse
+    public function settle(Request $request, $settlementId): JsonResponse
     {
+        $settlement = VehicleSettlement::findOrFail($settlementId);
+        
         if ($settlement->status === 'settled') {
             return response()->json(['error' => 'Settlement already completed'], 400);
         }
@@ -133,7 +169,8 @@ class VehicleSettlementController extends Controller
             $shop = InventoryLocation::where('type', 'shop')->first();
             if ($shop && $settlement->items_returned) {
                 foreach ($settlement->items_returned as $item) {
-                    if ($item['quantity'] > 0) {
+                    $qtyReturned = $item['quantity_returned'] ?? $item['quantity'] ?? 0;
+                    if ($qtyReturned > 0) {
                         // Deduct from vehicle
                         $vehicleInventory = Inventory::where('product_id', $item['product_id'])
                             ->where('inventory_location_id', $settlement->inventory_location_id)
@@ -141,7 +178,7 @@ class VehicleSettlementController extends Controller
                             ->first();
 
                         if ($vehicleInventory) {
-                            $transferQty = min($vehicleInventory->quantity, $item['quantity']);
+                            $transferQty = min($vehicleInventory->quantity, $qtyReturned);
                             $vehicleInventory->quantity -= $transferQty;
                             $vehicleInventory->save();
 
@@ -173,8 +210,9 @@ class VehicleSettlementController extends Controller
         return response()->json($settlement);
     }
 
-    public function show(VehicleSettlement $settlement): JsonResponse
+    public function show($settlementId): JsonResponse
     {
+        $settlement = VehicleSettlement::findOrFail($settlementId);
         $settlement->load('location');
         return response()->json($settlement);
     }

@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: '/api',
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -93,4 +94,35 @@ export const updateBasePrepIngredient = (prepId, ingredientId, data) => api.put(
 export const removeBasePrepIngredient = (prepId, ingredientId) => api.delete(`/base-preparations/${prepId}/ingredients/${ingredientId}`);
 export const recalculateBasePrepCost = (id) => api.post(`/base-preparations/${id}/recalculate`);
 
+// Settings (Admin only)
+export const getSettings = () => api.get('/settings');
+export const updateSetting = (key, value) => api.put(`/settings/${key}`, { value });
+export const bulkUpdateSettings = (settings) => api.post('/settings/bulk', { settings });
+
+// Vehicle Management (Admin only)
+export const getVehicles = () => api.get('/settings/vehicles');
+export const createVehicle = (data) => api.post('/settings/vehicles', data);
+export const updateVehicle = (id, data) => api.put(`/settings/vehicles/${id}`, data);
+export const deleteVehicle = (id) => api.delete(`/settings/vehicles/${id}`);
+export const restoreVehicle = (id) => api.post(`/settings/vehicles/${id}/restore`);
+
+// User Management (Admin only)
+export const getUsers = () => api.get('/settings/users');
+export const getRoles = () => api.get('/settings/roles');
+export const createUser = (data) => api.post('/settings/users', data);
+export const updateUser = (id, data) => api.put(`/settings/users/${id}`, data);
+export const deleteUser = (id) => api.delete(`/settings/users/${id}`);
+
+// Role & Permission Management (Admin only)
+export const getPermissions = () => api.get('/settings/permissions');
+export const getRolePermissions = (roleId) => api.get(`/settings/roles/${roleId}/permissions`);
+export const createRole = (data) => api.post('/settings/roles', data);
+export const updateRole = (roleId, data) => api.put(`/settings/roles/${roleId}`, data);
+export const deleteRole = (roleId) => api.delete(`/settings/roles/${roleId}`);
+export const syncRolePermissions = (roleId, permissions) => api.post(`/settings/roles/${roleId}/permissions`, { permissions });
+
+// Production Item Update (Admin only)
+export const updateProductionItem = (batchId, itemId, data) => api.put(`/production/${batchId}/items/${itemId}`, data);
+
 export default api;
+

@@ -4,18 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryLocation extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'type',
         'description',
         'is_active',
+        'float_cash',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'float_cash' => 'decimal:2',
     ];
 
     public function inventories(): HasMany

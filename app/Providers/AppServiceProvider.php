@@ -20,8 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (app()->environment('local')) {
-            URL::forceScheme('https');
-        }
+        // Register explicit route model binding for production -> ProductionBatch
+        \Illuminate\Support\Facades\Route::model('production', \App\Models\ProductionBatch::class);
     }
 }
