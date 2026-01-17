@@ -24,3 +24,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+/tailadmin-temp/
+/horizon-tailwind-react-nextjs-main/
+build_log*.txt
