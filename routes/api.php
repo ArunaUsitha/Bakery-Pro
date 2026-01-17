@@ -105,8 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::post('production/{production}/complete', [ProductionController::class, 'complete']);
     Route::apiResource('production', ProductionController::class)->except(['update', 'destroy']);
 
-    Route::apiResource('sales', SalesController::class)->except(['update', 'destroy']);
     Route::get('sales/today', [SalesController::class, 'getTodaySale']);
+    Route::apiResource('sales', SalesController::class)->except(['update', 'destroy']);
     Route::post('sales/{sale}/items', [SalesController::class, 'addItem']);
     Route::post('sales/{sale}/collect-cash', [SalesController::class, 'recordCashCollection']);
     Route::post('sales/{sale}/close', [SalesController::class, 'close']);

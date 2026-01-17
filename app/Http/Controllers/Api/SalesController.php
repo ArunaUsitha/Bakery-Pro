@@ -8,6 +8,8 @@ use App\Models\SaleItem;
 use App\Models\Inventory;
 use App\Models\InventoryLocation;
 use App\Models\Product;
+use App\Models\ShopSettlement;
+use App\Models\VehicleSettlement;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -156,14 +158,70 @@ class SalesController extends Controller
             'location_id' => 'required|exists:inventory_locations,id',
         ]);
 
+        $locationId = $validated['location_id'];
+        $location = InventoryLocation::findOrFail($locationId);
+
+
+
+        // 1. Try to find a manual Sale record
         $sale = Sale::with(['location', 'items.product'])
-            ->where('inventory_location_id', $validated['location_id'])
+            ->where('inventory_location_id', $locationId)
             ->whereDate('sale_date', today())
             ->first();
 
+        // 2. If no manual sale or empty items, check for Settlements
+        if (!$sale || $sale->items->isEmpty()) {
+            $settlement = null;
+            if ($location->type === 'shop') {
+                $settlement = ShopSettlement::where('inventory_location_id', $locationId)
+                    ->whereDate('settlement_date', today())
+                    ->first();
+            } else {
+                $settlement = VehicleSettlement::where('inventory_location_id', $locationId)
+                    ->whereDate('settlement_date', today())
+                    ->first();
+            }
+
+            if ($settlement && !empty($settlement->items_sold)) {
+
+                // Construct a virtual sale object for the frontend
+                $items = collect($settlement->items_sold)->map(function($item) {
+                    $pid = $item['product_id'] ?? null;
+                    
+                    return [
+                        'id' => 's' . ($item['product_id'] ?? rand()),
+                        'product_id' => $item['product_id'],
+                        'quantity' => floatval($item['quantity_sold'] ?? $item['quantity'] ?? 0),
+                        'unit_price' => floatval($item['price'] ?? ($item['quantity'] > 0 ? $item['total_price'] / $item['quantity'] : 0) ?? 0),
+                        'total_price' => floatval($item['subtotal'] ?? $item['total_price'] ?? 0),
+                        'product' => [
+                            'name' => $item['product_name'] ?? 'Unknown Product'
+                        ]
+                    ];
+                });
+
+                return response()->json([
+                    'id' => 'settlement-' . $settlement->id,
+                    'inventory_location_id' => $locationId,
+                    'sale_date' => $settlement->settlement_date,
+                    'total_amount' => (float)$settlement->expected_cash,
+                    'expected_amount' => (float)$settlement->expected_cash,
+                    'actual_amount' => $settlement->actual_cash !== null ? (float)$settlement->actual_cash : null,
+                    'discrepancy' => $settlement->discrepancy !== null ? (float)$settlement->discrepancy : 0, // Default to 0 instead of null if we want to avoid NaN in buggy frontend logic
+                    'status' => $settlement->status === 'settled' ? 'closed' : 'open',
+                    'notes' => $settlement->notes,
+                    'items' => $items,
+                    'location' => $location
+                ]);
+            }
+        }
+
+
+
+        // 3. Fallback: Return manual sale or create empty one
         if (!$sale) {
             $sale = Sale::create([
-                'inventory_location_id' => $validated['location_id'],
+                'inventory_location_id' => $locationId,
                 'sale_date' => today(),
                 'total_amount' => 0,
                 'expected_amount' => 0,
@@ -171,6 +229,12 @@ class SalesController extends Controller
             ]);
             $sale->load(['location', 'items.product']);
         }
+
+        // Ensure numeric fields are clean
+        $sale->total_amount = (float)$sale->total_amount;
+        $sale->expected_amount = (float)$sale->expected_amount;
+        $sale->actual_amount = $sale->actual_amount !== null ? (float)$sale->actual_amount : null;
+        $sale->discrepancy = $sale->discrepancy !== null ? (float)$sale->discrepancy : null;
 
         return response()->json($sale);
     }
