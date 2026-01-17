@@ -113,6 +113,7 @@ function VehicleSettlement() {
             product_name: item.product_name,
             quantity_sent: item.quantity_sent || item.quantity || 0,
             quantity_returned: item.quantity_returned ?? item.quantity ?? 0,
+            selling_price: item.selling_price || 0,
         })));
         setShowCountModal(true);
     };
@@ -235,16 +236,37 @@ function VehicleSettlement() {
                                     <div className="mt-6 space-y-4">
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]">
-                                                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Expected</p>
-                                                <p className="mt-1 text-sm font-bold text-gray-800 dark:text-white/90">{formatCurrency(settlement.expected_cash)}</p>
+                                                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Items Sold</p>
+                                                <p className="mt-1 text-sm font-bold text-gray-800 dark:text-white/90">{settlement.items_sold?.length || 0} types</p>
                                             </div>
-                                            {isSettled && (
-                                                <div className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]">
-                                                    <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Actual</p>
-                                                    <p className="mt-1 text-sm font-bold text-gray-800 dark:text-white/90">{formatCurrency(settlement.actual_cash)}</p>
+                                            <div className="rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]">
+                                                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Expected Total</p>
+                                                <div className="mt-1 flex flex-col">
+                                                    <p className="text-sm font-bold text-gray-800 dark:text-white/90">{formatCurrency(settlement.expected_cash)}</p>
+                                                    <p className="text-[9px] text-gray-500">
+                                                        {formatCurrency(parseFloat(settlement.expected_cash) - (parseFloat(settlement.float_cash) || 0))} + {formatCurrency(parseFloat(settlement.float_cash) || 0)}
+                                                    </p>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
+
+                                        {/* Simplified Sale breakdown */}
+                                        {settlement.items_sold?.length > 0 && (
+                                            <div className="rounded-xl border border-gray-100 p-2 dark:border-white/[0.05]">
+                                                <p className="text-[9px] uppercase tracking-wider text-gray-400 mb-1">Today's Sales</p>
+                                                <div className="space-y-1">
+                                                    {settlement.items_sold.slice(0, 3).map((item, idx) => (
+                                                        <div key={idx} className="flex justify-between text-[11px]">
+                                                            <span className="text-gray-600 dark:text-gray-400 truncate max-w-[100px]">{item.product_name} x {item.quantity}</span>
+                                                            <span className="font-medium text-gray-800 dark:text-white/90">{formatCurrency(item.total_price)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {settlement.items_sold.length > 3 && (
+                                                        <p className="text-[10px] text-brand-500">+{settlement.items_sold.length - 3} more items...</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {isSettled && settlement.discrepancy !== 0 && (
                                             <div className={`flex items-center gap-2 rounded-xl p-3 text-sm font-medium ${settlement.discrepancy >= 0 ? 'bg-green-50 text-green-700 dark:bg-green-500/5 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-500/5 dark:text-red-400'}`}>
@@ -463,9 +485,19 @@ function VehicleSettlement() {
                             </div>
 
                             <div className="rounded-2xl bg-brand-50 p-5 dark:bg-brand-500/10">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-brand-700 dark:text-brand-300">Expected Cash Transfer:</span>
-                                    <span className="text-2xl font-black text-brand-600 dark:text-brand-400">{formatCurrency(currentSettlement.expected_cash)}</span>
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between text-brand-700 dark:text-brand-300">
+                                        <span className="text-sm font-medium">Sales Collection ({currentSettlement.items_sold?.length || 0} items):</span>
+                                        <span className="text-sm font-bold">{formatCurrency(parseFloat(currentSettlement.expected_cash) - (parseFloat(currentSettlement.float_cash) || 0))}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-brand-700 dark:text-brand-300">
+                                        <span className="text-sm font-medium">Float Cash (In Hand):</span>
+                                        <span className="text-sm font-bold">{formatCurrency(parseFloat(currentSettlement.float_cash) || 0)}</span>
+                                    </div>
+                                    <div className="pt-2 mt-2 border-t border-brand-200 dark:border-brand-500/20 flex items-center justify-between">
+                                        <span className="text-base font-bold text-brand-800 dark:text-brand-200">Total Expected:</span>
+                                        <span className="text-2xl font-black text-brand-600 dark:text-brand-400">{formatCurrency(currentSettlement.expected_cash)}</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -581,7 +613,7 @@ function VehicleSettlement() {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     );
 }
 

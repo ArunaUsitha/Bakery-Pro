@@ -119,13 +119,21 @@ function Production() {
     };
 
     const openTransferModal = () => {
-        const items = batch.items.map(item => ({
-            product_id: item.product_id,
-            product_name: item.product.name,
-            available: item.quantity_produced,
-            shop_qty: 0,
-            vehicle_qty: 0
-        }));
+        const vehicles = locations.filter(l => l.type === 'vehicle');
+        const items = batch.items.map(item => {
+            // Create an object with shop_qty and one qty field per vehicle
+            const itemData = {
+                product_id: item.product_id,
+                product_name: item.product.name,
+                available: item.quantity_produced,
+                shop_qty: 0,
+            };
+            // Add a qty field for each vehicle
+            vehicles.forEach(v => {
+                itemData[`vehicle_${v.id}`] = 0;
+            });
+            return itemData;
+        });
         setTransferItems(items);
         setShowTransferModal(true);
     };
@@ -136,6 +144,7 @@ function Production() {
         const vehicles = locations.filter(l => l.type === 'vehicle');
 
         transferItems.forEach(item => {
+            // Shop transfer
             if (item.shop_qty > 0 && shop) {
                 transferData.push({
                     product_id: item.product_id,
@@ -143,13 +152,17 @@ function Production() {
                     location_id: shop.id
                 });
             }
-            if (item.vehicle_qty > 0 && vehicles.length > 0) {
-                transferData.push({
-                    product_id: item.product_id,
-                    quantity: item.vehicle_qty,
-                    location_id: vehicles[0].id
-                });
-            }
+            // Vehicle transfers
+            vehicles.forEach(v => {
+                const qty = item[`vehicle_${v.id}`] || 0;
+                if (qty > 0) {
+                    transferData.push({
+                        product_id: item.product_id,
+                        quantity: qty,
+                        location_id: v.id
+                    });
+                }
+            });
         });
 
         if (transferData.length === 0) {
@@ -169,7 +182,26 @@ function Production() {
 
     const updateTransferQty = (index, field, value) => {
         const updated = [...transferItems];
-        updated[index][field] = parseInt(value) || 0;
+        const item = updated[index];
+        const vehicles = locations.filter(l => l.type === 'vehicle');
+
+        const newValue = Math.max(0, parseInt(value) || 0);
+
+        // Calculate current total excluding the field being edited
+        let currentTotal = item.shop_qty;
+        vehicles.forEach(v => {
+            if (`vehicle_${v.id}` !== field) {
+                currentTotal += item[`vehicle_${v.id}`] || 0;
+            }
+        });
+        if (field === 'shop_qty') {
+            currentTotal -= item.shop_qty;
+        }
+
+        // Clamp value to not exceed remaining available
+        const maxAllowed = item.available - currentTotal;
+        item[field] = Math.min(newValue, maxAllowed);
+
         setTransferItems(updated);
     };
 
@@ -429,7 +461,7 @@ function Production() {
                 isOpen={showTransferModal}
                 onClose={() => setShowTransferModal(false)}
                 title="Transfer to Stock"
-                size="lg"
+                size="xl"
             >
                 <div className="p-6">
                     <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-4 dark:border-blue-500/20 dark:bg-blue-500/5 mb-6">
@@ -439,47 +471,67 @@ function Production() {
                         </p>
                     </div>
 
-                    <div className="max-h-[400px] overflow-y-auto rounded-xl border border-gray-100 dark:border-white/[0.03]">
+                    <div className="max-h-[400px] overflow-x-auto overflow-y-auto rounded-xl border border-gray-100 dark:border-white/[0.03]">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableCell isHeader px="px-4">Product</TableCell>
                                     <TableCell isHeader px="px-4 text-center">Available</TableCell>
-                                    <TableCell isHeader px="px-4 text-center">To Shop</TableCell>
-                                    <TableCell isHeader px="px-4 text-center">To Vehicle</TableCell>
+                                    <TableCell isHeader px="px-4 text-center">
+                                        {locations.find(l => l.type === 'shop')?.name || 'Shop'}
+                                    </TableCell>
+                                    {locations.filter(l => l.type === 'vehicle').map(vehicle => (
+                                        <TableCell key={vehicle.id} isHeader px="px-4 text-center">
+                                            {vehicle.name}
+                                        </TableCell>
+                                    ))}
+                                    <TableCell isHeader px="px-4 text-center">Remaining</TableCell>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {transferItems.map((item, idx) => (
-                                    <TableRow key={idx} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
-                                        <TableCell className="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
-                                            {item.product_name}
-                                        </TableCell>
-                                        <TableCell className="px-4 py-3 text-center font-bold text-gray-800 dark:text-white/90">
-                                            {item.available}
-                                        </TableCell>
-                                        <TableCell className="px-4 py-3 text-center">
-                                            <input
-                                                type="number"
-                                                className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03]"
-                                                min="0"
-                                                max={item.available - item.vehicle_qty}
-                                                value={item.shop_qty}
-                                                onChange={(e) => updateTransferQty(idx, 'shop_qty', e.target.value)}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="px-4 py-3 text-center">
-                                            <input
-                                                type="number"
-                                                className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03]"
-                                                min="0"
-                                                max={item.available - item.shop_qty}
-                                                value={item.vehicle_qty}
-                                                onChange={(e) => updateTransferQty(idx, 'vehicle_qty', e.target.value)}
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {transferItems.map((item, idx) => {
+                                    const vehicles = locations.filter(l => l.type === 'vehicle');
+                                    const totalAllocated = item.shop_qty + vehicles.reduce((sum, v) => sum + (item[`vehicle_${v.id}`] || 0), 0);
+                                    const remaining = item.available - totalAllocated;
+
+                                    return (
+                                        <TableRow key={idx} className="hover:bg-gray-50 dark:hover:bg-white/[0.01]">
+                                            <TableCell className="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
+                                                {item.product_name}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center font-bold text-gray-800 dark:text-white/90">
+                                                {item.available}
+                                            </TableCell>
+                                            <TableCell className="px-4 py-3 text-center">
+                                                <input
+                                                    type="number"
+                                                    className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03]"
+                                                    min="0"
+                                                    max={item.available}
+                                                    value={item.shop_qty}
+                                                    onChange={(e) => updateTransferQty(idx, 'shop_qty', e.target.value)}
+                                                />
+                                            </TableCell>
+                                            {vehicles.map(vehicle => (
+                                                <TableCell key={vehicle.id} className="px-4 py-3 text-center">
+                                                    <input
+                                                        type="number"
+                                                        className="w-20 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none transition-all focus:border-brand-500 dark:border-white/[0.03] dark:bg-white/[0.03]"
+                                                        min="0"
+                                                        max={item.available}
+                                                        value={item[`vehicle_${vehicle.id}`] || 0}
+                                                        onChange={(e) => updateTransferQty(idx, `vehicle_${vehicle.id}`, e.target.value)}
+                                                    />
+                                                </TableCell>
+                                            ))}
+                                            <TableCell className="px-4 py-3 text-center">
+                                                <span className={`font-bold ${remaining === 0 ? 'text-green-500' : 'text-orange-500'}`}>
+                                                    {remaining}
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </div>
@@ -499,3 +551,4 @@ function Production() {
 }
 
 export default Production;
+

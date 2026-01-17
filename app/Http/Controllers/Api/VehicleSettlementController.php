@@ -49,36 +49,144 @@ class VehicleSettlementController extends Controller
             ->first();
 
         if ($existingSettlement) {
+            // Recalculate items_returned with fresh data
+            $currentInventory = Inventory::where('inventory_location_id', $vehicle->id)
+                ->where('quantity', '>', 0)
+                ->with('product')
+                ->get()
+                ->mapWithKeys(fn($inv) => [$inv->product_id => $inv]);
+
+            $itemsSent = StockTransfer::where('to_location_id', $vehicle->id)
+                ->whereDate('created_at', today())
+                ->whereIn('transfer_type', ['production_to_location', 'shop_to_vehicle'])
+                ->with('product')
+                ->get()
+                ->groupBy('product_id')
+                ->map(function($transfers) {
+                    $product = $transfers->first()->product;
+                    return [
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'quantity' => $transfers->sum('quantity'),
+                        'selling_price' => $product->selling_price,
+                    ];
+                })
+                ->values();
+
+            // Build map of previous return counts to preserve them
+            $previousReturnsMap = collect($existingSettlement->items_returned)->mapWithKeys(fn($item) => [$item['product_id'] => $item['quantity_returned']]);
+
+            $itemsReturned = $itemsSent->map(function ($sentItem) use ($currentInventory, $previousReturnsMap) {
+                // If we already had a return count for this item, keep it. 
+                // Otherwise, default to current stock on vehicle.
+                if ($previousReturnsMap->has($sentItem['product_id'])) {
+                    $qtyReturned = $previousReturnsMap[$sentItem['product_id']];
+                } else {
+                    $qtyReturned = $currentInventory->has($sentItem['product_id']) 
+                        ? $currentInventory[$sentItem['product_id']]->quantity 
+                        : 0;
+                }
+                
+                // Always fetch the latest price
+                $product = \App\Models\Product::find($sentItem['product_id']);
+                $price = $product ? $product->selling_price : 0;
+
+                return [
+                    'product_id' => $sentItem['product_id'],
+                    'product_name' => $sentItem['product_name'],
+                    'quantity_sent' => $sentItem['quantity'],
+                    'quantity_returned' => $qtyReturned,
+                    'selling_price' => $price,
+                ];
+            });
+
+            // Recalculate expected amounts based on fresh data
+            $expectedFromSales = $itemsReturned->sum(function ($item) {
+                $soldQty = max(0, $item['quantity_sent'] - $item['quantity_returned']);
+                return $soldQty * ($item['selling_price'] ?? 0);
+            });
+
+            $expectedFromStock = $itemsReturned->sum(function ($item) {
+                return ($item['quantity_returned'] ?? 0) * ($item['selling_price'] ?? 0);
+            });
+
+            $floatCash = $existingSettlement->float_cash ?? 0;
+            $expectedCash = $expectedFromSales + $floatCash;
+
+
+
+            // Create the calculated items sold list for the header/UI
+            $itemsSoldCalculated = $itemsReturned->map(function ($item) {
+                $soldQty = max(0, $item['quantity_sent'] - $item['quantity_returned']);
+                return [
+                    'product_id' => $item['product_id'],
+                    'product_name' => $item['product_name'],
+                    'quantity' => $soldQty,
+                    'total_price' => $soldQty * ($item['selling_price'] ?? 0),
+                ];
+            })->filter(fn($item) => $item['quantity'] > 0)->values();
+
+            // Update settlement with fresh data
+            $existingSettlement->update([
+                'items_sent' => $itemsSent,
+                'items_returned' => $itemsReturned,
+                'items_sold' => $itemsSoldCalculated,
+                'expected_from_stock' => $expectedFromStock,
+                'expected_cash' => $expectedCash,
+            ]);
+
+            \Log::info("Existing settlement refreshed. ID: {$existingSettlement->id}, Expected: {$expectedCash}");
+
+
             $existingSettlement->load('location');
             return response()->json($existingSettlement, 200);
         }
+
 
         // Get items currently on vehicle
         $currentInventory = Inventory::where('inventory_location_id', $vehicle->id)
             ->where('quantity', '>', 0)
             ->with('product')
             ->get()
-            ->map(fn($inv) => [
-                'product_id' => $inv->product_id,
-                'product_name' => $inv->product->name,
-                'quantity_sent' => $inv->quantity,
-                'quantity_returned' => $inv->quantity, // Default to same as sent
-                'selling_price' => $inv->product->selling_price,
-            ]);
+            ->mapWithKeys(fn($inv) => [$inv->product_id => $inv]);
 
-        // Get items sent out today
+        // Get items sent out today (including shop to vehicle)
         $itemsSent = StockTransfer::where('to_location_id', $vehicle->id)
             ->whereDate('created_at', today())
-            ->where('transfer_type', 'production_to_location')
+            ->whereIn('transfer_type', ['production_to_location', 'shop_to_vehicle'])
             ->with('product')
             ->get()
             ->groupBy('product_id')
-            ->map(fn($transfers) => [
-                'product_id' => $transfers->first()->product_id,
-                'product_name' => $transfers->first()->product->name,
-                'quantity' => $transfers->sum('quantity'),
-            ])
+            ->map(function($transfers) {
+                $product = $transfers->first()->product;
+
+                return [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'quantity' => $transfers->sum('quantity'),
+                    'selling_price' => $product->selling_price,
+                ];
+            })
             ->values();
+
+        // Build items_returned from itemsSent with current inventory for default returned values
+        $itemsReturned = $itemsSent->map(function ($sentItem) use ($currentInventory) {
+            $currentQty = $currentInventory->has($sentItem['product_id']) 
+                ? $currentInventory[$sentItem['product_id']]->quantity 
+                : 0;
+            
+            // Always fetch latest price
+            $product = \App\Models\Product::find($sentItem['product_id']);
+            $price = $product ? $product->selling_price : 0;
+
+            return [
+                'product_id' => $sentItem['product_id'],
+                'product_name' => $sentItem['product_name'],
+                'quantity_sent' => $sentItem['quantity'],
+                'quantity_returned' => $currentQty, // Default to current stock
+                'selling_price' => $price,
+            ];
+        });
 
         // Get today's sales from vehicle
         $sale = Sale::with('items.product')
@@ -93,35 +201,51 @@ class VehicleSettlementController extends Controller
             'total_price' => $item->total_price,
         ]) : collect();
 
-        // Calculate expected cash from sales
-        $expectedFromSales = $sale ? $sale->total_amount : 0;
+        // Calculate expected cash from sales (items sent minus items currently on vehicle)
+        $expectedFromSales = $itemsReturned->sum(function ($item) {
+            $soldQty = max(0, $item['quantity_sent'] - $item['quantity_returned']);
+            return $soldQty * ($item['selling_price'] ?? 0);
+        });
         
-        // Calculate expected cash from stocked items (current inventory value at selling price)
-        $expectedFromStock = $currentInventory->sum(function ($item) {
-            return ($item['quantity_sent'] ?? 0) * ($item['selling_price'] ?? 0);
+        // Calculate expected value of stocked items (what should be physically on vehicle)
+        $expectedFromStock = $itemsReturned->sum(function ($item) {
+            return ($item['quantity_returned'] ?? 0) * ($item['selling_price'] ?? 0);
         });
 
         // Get vehicle's float cash (starting cash)
         $floatCash = $vehicle->float_cash ?? 0;
 
-        // Total expected = sales + float cash (stock items are returned, not sold)
+        // Total expected = (Sent - Returned) value + float cash
         $expectedCash = $expectedFromSales + $floatCash;
+
+        // Create the calculated items sold list
+        $itemsSoldCalculated = $itemsReturned->map(function ($item) {
+            $soldQty = max(0, $item['quantity_sent'] - $item['quantity_returned']);
+            return [
+                'product_id' => $item['product_id'],
+                'product_name' => $item['product_name'],
+                'quantity' => $soldQty,
+                'total_price' => $soldQty * ($item['selling_price'] ?? 0),
+            ];
+        })->filter(fn($item) => $item['quantity'] > 0)->values();
 
         $settlement = VehicleSettlement::create([
             'inventory_location_id' => $vehicle->id,
             'settlement_date' => today(),
             'items_sent' => $itemsSent,
-            'items_returned' => $currentInventory,
-            'items_sold' => $itemsSold,
+            'items_returned' => $itemsReturned,
+            'items_sold' => $itemsSoldCalculated, // Use calculated instead of recorded
             'float_cash' => $floatCash,
             'expected_from_stock' => $expectedFromStock,
             'expected_cash' => $expectedCash,
             'status' => 'pending',
         ]);
 
+
         $settlement->load('location');
         return response()->json($settlement, 201);
     }
+
 
     public function recordReturn(Request $request, $settlementId): JsonResponse
     {
@@ -139,11 +263,49 @@ class VehicleSettlementController extends Controller
             'items_returned.*.quantity_returned' => 'required|integer|min:0',
         ]);
 
-        $settlement->items_returned = $validated['items_returned'];
-        $settlement->save();
+        // Recalculate expected amounts based on new return counts
+        $itemsReturned = collect($validated['items_returned'])->map(function($item) {
+            // Fetch latest price to be safe
+            $product = \App\Models\Product::find($item['product_id']);
+            $item['selling_price'] = $product ? $product->selling_price : 0;
+            return $item;
+        });
+        
+        $expectedFromSales = $itemsReturned->sum(function ($item) {
+            $soldQty = max(0, $item['quantity_sent'] - $item['quantity_returned']);
+            return $soldQty * ($item['selling_price'] ?? 0);
+        });
+
+        $expectedFromStock = $itemsReturned->sum(function ($item) {
+            return ($item['quantity_returned'] ?? 0) * ($item['selling_price'] ?? 0);
+        });
+
+        $floatCash = $settlement->float_cash ?? 0;
+        $expectedCash = $expectedFromSales + $floatCash;
+
+        // Update items_sold based on actual differences
+        $itemsSold = $itemsReturned->map(function ($item) {
+            $soldQty = max(0, $item['quantity_sent'] - $item['quantity_returned']);
+            return [
+                'product_id' => $item['product_id'],
+                'product_name' => $item['product_name'],
+                'quantity' => $soldQty,
+                'total_price' => $soldQty * ($item['selling_price'] ?? 0),
+            ];
+        })->filter(fn($item) => $item['quantity'] > 0)->values();
+
+        $settlement->update([
+            'items_returned' => $itemsReturned->toArray(),
+            'items_sold' => $itemsSold->toArray(),
+            'expected_from_stock' => (float)$expectedFromStock,
+            'expected_cash' => (float)$expectedCash,
+        ]);
+
+        \Log::info("Return recorded for settlement {$settlement->id}. Expected now: {$settlement->expected_cash}");
 
         return response()->json($settlement);
     }
+
 
     public function settle(Request $request, $settlementId): JsonResponse
     {

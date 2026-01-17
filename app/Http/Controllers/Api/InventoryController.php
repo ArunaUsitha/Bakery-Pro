@@ -57,11 +57,13 @@ class InventoryController extends Controller
             'items.*.location_id' => 'required|exists:inventory_locations,id',
         ]);
 
+
+
         DB::transaction(function () use ($validated) {
             foreach ($validated['items'] as $item) {
                 $product = Product::find($item['product_id']);
                 $productionDate = today();
-                $expiryDate = today()->addDays($product->shelf_life_days);
+                $expiryDate = today()->addDays($product->shelf_life_days ?? 1);
 
                 // Find existing inventory or create new
                 $inventory = Inventory::firstOrNew([
@@ -73,6 +75,7 @@ class InventoryController extends Controller
 
                 $inventory->quantity += $item['quantity'];
                 $inventory->save();
+
 
                 // Record transfer
                 StockTransfer::create([
@@ -140,12 +143,21 @@ class InventoryController extends Controller
         return response()->json(['message' => 'Transfer completed successfully']);
     }
 
-    public function getLocationInventory(InventoryLocation $location): JsonResponse
+    public function getLocationInventory($locationId): JsonResponse
     {
+        // Try to find location with soft deletes included
+        $location = InventoryLocation::withTrashed()->find($locationId);
+
+        if (!$location) {
+            return response()->json(['error' => 'Location not found'], 404);
+        }
+
+
         $inventory = Inventory::with('product')
             ->where('inventory_location_id', $location->id)
             ->where('quantity', '>', 0)
             ->get();
+
 
         return response()->json($inventory);
     }
